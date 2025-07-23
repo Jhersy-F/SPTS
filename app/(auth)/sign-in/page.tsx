@@ -3,7 +3,7 @@
 import React from "react";
 
 import AuthForm from "../shared/AuthForm";
-import { signInWithCredentials } from "@/lib/actions/auth.action";
+import { signInWithCredentials } from "../actions/auth.actions";
 import { SignInSchema } from "@/lib/validations";
 
 const SignIn = () => {
@@ -11,7 +11,7 @@ const SignIn = () => {
     <AuthForm
       formType="SIGN_IN"
       schema={SignInSchema}
-      defaultValues={{ email: "", password: "" }}
+      defaultValues={{ username: "", password: "" }}
       onSubmit={signInWithCredentials}
     />
   );
