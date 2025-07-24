@@ -1,16 +1,18 @@
 "use server";
 
 import bcrypt from "bcryptjs";
-import mongoose from "mongoose";
+import handleError from "@/lib/handlers/error";
+import { error } from "console";
+/*import mongoose from "mongoose";
 
 import { signIn } from "@/auth";
 import Account from "@/database/account.model";
 import User from "@/database/user.model";
 
 import action from "../handlers/action";
-import handleError from "../handlers/error";
+
 import { NotFoundError } from "../http-errors";
-import { SignInSchema, SignUpSchema } from "../validations";
+import { SignInSchema, SignUpSchema } from "@/lib/validations";
 
 export async function signUpWithCredentials(
   params: AuthCredentials
@@ -70,14 +72,14 @@ export async function signUpWithCredentials(
   } finally {
     await session.endSession();
   }
-}
+}*/
 
 export async function signInWithCredentials(
   params: Pick<AuthCredentials, "username" | "password">
 ): Promise<ActionResponse> {
-  const validationResult = await action({ params, schema: SignInSchema });
+   /*const validationResult = await action({ params, schema: SignInSchema });
 
-  if (validationResult instanceof Error) {
+ if (validationResult instanceof Error) {
     return handleError(validationResult) as ErrorResponse;
   }
 
@@ -107,5 +109,6 @@ export async function signInWithCredentials(
     return { success: true };
   } catch (error) {
     return handleError(error) as ErrorResponse;
-  }
+  }*/
+  return { success: true };
 }

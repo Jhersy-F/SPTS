@@ -43,7 +43,7 @@ const AuthForm = <T extends FieldValues>({
     formType,
     onSubmit,
 }: AuthFormProps<T>) => {
-    const router = useRouter();
+    //const router = useRouter();
     
     const form = useForm<z.infer<typeof schema>>({
     resolver: zodResolver(schema),
@@ -54,7 +54,7 @@ const AuthForm = <T extends FieldValues>({
 
     const result = (await onSubmit(data)) as ActionResponse;
     if(result?.success){
-        router.push(ROUTES.HOME);
+        //router.push(ROUTES.HOME);
     }
 };
 
