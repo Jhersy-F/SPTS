@@ -6,10 +6,10 @@ import AuthForm from "../shared/AuthForm";
 import { signInWithCredentials } from "../actions/auth.actions";
 import { SignUpSchema } from "@/lib/validations";
 
-const SignIn = () => {
+const SignUp = () => {
   return (
     <AuthForm
-      formType="SIGN_IN"
+      formType="SIGN_UP"
       schema={SignUpSchema}
       defaultValues={{ username: "", password: "" }}
       onSubmit={signInWithCredentials}
@@ -17,4 +17,4 @@ const SignIn = () => {
   );
 };
 
-export default SignIn;
+export default SignUp;
