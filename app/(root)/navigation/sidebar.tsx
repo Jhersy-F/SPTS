@@ -14,7 +14,14 @@ const LeftSidebar = async () => {
   const userId = "1" //session?.user?.id;
 
   return (
-    <section className="custom-scrollbar background-light900_dark200 light-border sticky left-0 top-0 flex h-screen flex-col justify-between overflow-y-auto border-r p-6 pt-36 shadow-light-300 dark:shadow-none max-sm:hidden lg:w-[266px]">
+    <section className="custom-scrollbar bg-[#145cc2] light-border sticky left-0 top-0 flex h-screen flex-col justify-between overflow-y-auto border-r p-6 pt-36 shadow-light-300 dark:shadow-none max-sm:hidden lg:w-[266px]">
+       <Image
+                  src="/images/logopsu.png"
+                  alt="DevFlow Logo"
+                  width={100}
+                  height={100}
+                  className="object-contain"
+                />
       <div className="flex flex-1 flex-col gap-6">
         <NavLinks userId={userId} />
       </div>

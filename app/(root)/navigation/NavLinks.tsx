@@ -37,17 +37,11 @@ const NavLinks = ({
             className={cn(
               isActive
                 ? "primary-gradient rounded-lg text-light-900"
-                : "text-dark300_light900",
-              "flex items-center justify-start gap-4 bg-transparent p-4"
+                : "text-white",
+              "flex items-center justify-start gap-4 bg-transparent p-4 text-white"
             )}
           >
-            <Image
-              src={item.imgURL}
-              alt={item.label}
-              width={20}
-              height={20}
-              className={cn({ "invert-colors": !isActive })}
-            />
+         
             <p
               className={cn(
                 isActive ? "base-bold" : "base-medium",

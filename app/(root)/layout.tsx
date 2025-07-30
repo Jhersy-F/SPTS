@@ -7,12 +7,16 @@ import TopBar from "./navigation/TopBar";
 const RootLayout = ({ children }: { children: ReactNode }) => {
     return(
         <main className="">
-            <TopBar />
+          
             <div className="flex">
                 <LeftSidebar/>
-                <section>
+                <div className=" flex-col w-full">
+                      <TopBar />
+                      <section>
                     {children}
-                </section>
+                    </section>
+                </div>
+                
             </div>
         </main>
     )
