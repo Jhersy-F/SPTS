@@ -1,10 +1,14 @@
+"use client"
 import React from "react";
+import { useParams, } from "next/navigation"; 
 
-const Monitoring = () => {
+const MonitoringView = () => {
+  const params = useParams<{ type: string }>();
+  const dataType = params.type;
   return (
     // Main container background changed to white, text to gray-900
     <div className="p-4 bg-white min-h-screen text-gray-900">
-      <h1 className="text-3xl font-bold mb-6 text-center text-gray-800">Monitoring</h1>
+      <h1 className="text-3xl font-bold mb-6 text-center text-gray-800">{dataType?dataType:""}</h1>
 
     
       <div className="overflow-x-auto bg-white rounded-lg shadow-md w-4/5 mx-auto">
@@ -46,4 +50,4 @@ const Monitoring = () => {
   );
 };
 
-export default Monitoring;
+export default MonitoringView;
