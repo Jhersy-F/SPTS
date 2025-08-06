@@ -1,0 +1,78 @@
+import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import fs from 'fs/promises';
+import path from 'path';
+
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
+
+export async function POST(request: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+    
+    if (!session) {
+      return NextResponse.json(
+        { error: 'Not authorized' },
+        { status: 401 }
+      );
+    }
+
+    const formData = await request.formData();
+    const file = formData.get('file') as File;
+    const title = formData.get('title') as string;
+    const description = formData.get('description') as string;
+
+    if (!file) {
+      return NextResponse.json(
+        { error: 'No file provided' },
+        { status: 400 }
+      );
+    }
+
+    // Validate file type
+    const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    if (!allowedTypes.includes(file.type)) {
+      return NextResponse.json(
+        { error: 'Invalid file type. Only PDF and Word documents are allowed.' },
+        { status: 400 }
+      );
+    }
+
+    // Create uploads directory if it doesn't exist
+    const uploadDir = path.join(process.cwd(), 'public', 'uploads');
+    await fs.mkdir(uploadDir, { recursive: true });
+
+    // Generate unique filename
+    const uniqueFileName = `${Date.now()}-${file.name}`;
+    const filePath = path.join(uploadDir, uniqueFileName);
+
+    // Save file
+    await fs.writeFile(filePath, Buffer.from(await file.arrayBuffer()));
+
+    // Create upload record in database
+    const upload = await prisma.upload.create({
+      data: {
+        title,
+        description,
+        link: `/uploads/${uniqueFileName}`,
+        studentId: session.user.id,
+      },
+    });
+
+    return NextResponse.json({
+      message: 'Document uploaded successfully',
+      upload,
+    });
+  } catch (error) {
+    console.error('Upload error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
