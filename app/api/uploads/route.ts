@@ -11,6 +11,28 @@ export const config = {
   },
 };
 
+export async function GET() {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Not authorized' }, { status: 401 });
+    }
+    if (session.user.role !== 'student') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const uploads = await prisma.upload.findMany({
+      where: { studentId: Number(session.user.id) },
+      orderBy: { id: 'desc' },
+    });
+
+    return NextResponse.json({ uploads });
+  } catch (error) {
+    console.error('List uploads error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -34,9 +56,12 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validate file type
+    // Validate file type/extension (some browsers/OS may not set MIME correctly)
     const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-    if (!allowedTypes.includes(file.type)) {
+    const lowerName = file.name.toLowerCase();
+    const extAllowed = lowerName.endsWith('.pdf') || lowerName.endsWith('.doc') || lowerName.endsWith('.docx');
+    const typeAllowed = allowedTypes.includes(file.type);
+    if (!(typeAllowed || extAllowed)) {
       return NextResponse.json(
         { error: 'Invalid file type. Only PDF and Word documents are allowed.' },
         { status: 400 }
@@ -60,7 +85,7 @@ export async function POST(request: Request) {
         title,
         description,
         link: `/uploads/${uniqueFileName}`,
-        studentId: session.user.id,
+        studentId: Number(session.user.id),
       },
     });
 

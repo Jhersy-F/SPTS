@@ -1,8 +1,7 @@
-import NextAuth from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
-import { SessionStrategy, DefaultSession, Account, Profile, Session } from 'next-auth';
+import { SessionStrategy, DefaultSession, Session } from 'next-auth';
 import { AdapterUser } from 'next-auth/adapters';
 import { JWT } from 'next-auth/jwt';
 import { AuthOptions } from 'next-auth';
@@ -23,20 +22,19 @@ declare module 'next-auth' {
   interface JWT {
     id: string;
     role: 'student' | 'instructor';
-    emailVerified: Date | null;
-    email: string;
   }
 }
 
 export const authOptions: AuthOptions = {
   providers: [
     CredentialsProvider({
+      id: 'student-credentials',
       name: 'Student Credentials',
       credentials: {
         studentNumber: { label: "Student Number", type: "text" },
         password: { label: "Password", type: "password" }
       },
-      async authorize(credentials, req) {
+      async authorize(credentials) {
         const student = await prisma.student.findUnique({
           where: { studentNumber: credentials?.studentNumber }
         });
@@ -65,18 +63,19 @@ export const authOptions: AuthOptions = {
       }
     }),
     CredentialsProvider({
+      id: 'instructor-credentials',
       name: 'Instructor Credentials',
       credentials: {
-        email: { label: "Email", type: "email" },
+        username: { label: "Username", type: "text" },
         password: { label: "Password", type: "password" }
       },
-      async authorize(credentials, req) {
+      async authorize(credentials) {
         const instructor = await prisma.instructor.findUnique({
-          where: { email: credentials?.email }
+          where: { username: credentials?.username }
         });
 
         if (!instructor) {
-          throw new Error('Invalid email');
+          throw new Error('Invalid username');
         }
 
         if (!instructor.password) {
@@ -90,9 +89,9 @@ export const authOptions: AuthOptions = {
 
         return {
           id: instructor.id.toString(), 
-          email: instructor.email,
-          name: instructor.name,
+          name: `${instructor.firstName} ${instructor.lastName}`,
           firstName: instructor.firstName,
+          lastName: instructor.lastName,
           role: 'instructor',
           emailVerified: null
         };
@@ -111,8 +110,6 @@ export const authOptions: AuthOptions = {
       if (user) {
         token.id = user.id;
         token.role = user.role as 'student' | 'instructor';
-        token.emailVerified = user.emailVerified ? new Date(user.emailVerified) : null;
-        token.email = user.email || '';
       }
       return token;
     },
@@ -120,13 +117,9 @@ export const authOptions: AuthOptions = {
       if (session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as 'student' | 'instructor';
-        session.user.emailVerified = token.emailVerified as Date | null;
-        session.user.email = token.email || '';
       }
       return session;
     }
   }
 };
 
-const handler = NextAuth(authOptions);
-export { handler as GET, handler as POST };

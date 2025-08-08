@@ -1,8 +1,9 @@
 import { ReactNode } from "react";
-import LeftSidebar from "./navigation/SideBar";
+import LeftSidebar from "./navigation/sidebar";
 
-import TopBar from "./navigation/TopBar";
+import TopBar from "./navigation/topbar";
 
+import SessionProviders from "@/components/SessionProviders";
 
 const RootLayout = ({ children }: { children: ReactNode }) => {
     return(
@@ -13,8 +14,10 @@ const RootLayout = ({ children }: { children: ReactNode }) => {
                 <div className=" flex-col w-full">
                       <TopBar />
                       <section>
-                    {children}
-                    </section>
+                        <SessionProviders>
+                          {children}
+                        </SessionProviders>
+                      </section>
                 </div>
                 
             </div>

@@ -7,16 +7,16 @@ import { cookies } from 'next/headers';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { email, password } = body;
+    const { username, password } = body;
 
     // Find instructor
     const instructor = await prisma.instructor.findUnique({
-      where: { email },
+      where: { username },
     });
 
     if (!instructor) {
       return NextResponse.json(
-        { error: 'Invalid email or password' },
+        { error: 'Invalid username or password' },
         { status: 401 }
       );
     }
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
 
     if (!isPasswordValid) {
       return NextResponse.json(
-        { error: 'Invalid email or password' },
+        { error: 'Invalid username or password' },
         { status: 401 }
       );
     }
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
       token,
       user: {
         id: instructor.id,
-        email: instructor.email,
+        username: instructor.username,
         firstName: instructor.firstName,
         lastName: instructor.lastName,
       },

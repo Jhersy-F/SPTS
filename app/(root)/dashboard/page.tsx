@@ -6,9 +6,9 @@ export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
   
   if (!session?.user) {
-    return null;
+    return <p>Not authenticated</p>;
   }
-
+  console.log(session);
   return (
     <div className="min-h-screen bg-gray-100">
       <div className="container mx-auto px-4 py-16">
@@ -20,7 +20,7 @@ export default async function DashboardPage() {
               <div className="space-y-4">
                 <div>
                   <h3 className="font-medium">Student Number:</h3>
-                  <p className="text-gray-600">{session.user.studentNumber}</p>
+                  <p className="text-gray-600">{session.user.id}</p>
                 </div>
                 <div>
                   <h3 className="font-medium">Role:</h3>

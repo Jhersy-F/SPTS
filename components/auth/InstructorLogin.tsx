@@ -7,11 +7,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useSession } from 'next-auth/react';
 import { User } from '@/types';
+import { signIn } from 'next-auth/react';
 
 type LoginFormData = z.infer<typeof loginSchema>;
 
 const loginSchema = z.object({
-  email: z.string().email('Invalid email address').min(1, 'Email is required'),
+  username: z.string().min(1, 'Username is required'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
 });
 
@@ -40,28 +41,21 @@ export default function InstructorLogin() {
     try {
       setLoading(true);
       setError('');
-      
-      const response = await fetch('/api/auth/instructor/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
+
+      const res = await signIn('instructor-credentials', {
+        redirect: false,
+        username: data.username,
+        password: data.password,
       });
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || 'Login failed');
+      if (res?.error) {
+        setError('Login failed. Please check your credentials.');
+        return;
       }
 
-      // Store token in localStorage or use a secure cookie
-      localStorage.setItem('token', result.token);
-      localStorage.setItem('user', JSON.stringify(result.user));
-
       router.push('/instructor/dashboard');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed. Please check your credentials.');
+    } catch {
+      setError('Login failed. Please check your credentials.');
     } finally {
       setLoading(false);
     }
@@ -79,15 +73,15 @@ export default function InstructorLogin() {
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium mb-1">Email</label>
+          <label className="block text-sm font-medium mb-1">Username</label>
           <input
-            type="email"
-            {...register('email')}
+            type="text"
+            {...register('username')}
             className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             disabled={loading}
           />
-          {errors.email && (
-            <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
+          {errors.username && (
+            <p className="text-red-500 text-sm mt-1">{errors.username.message}</p>
           )}
         </div>
 

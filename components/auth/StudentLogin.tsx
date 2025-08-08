@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { signIn } from 'next-auth/react';
 
 type LoginFormData = z.infer<typeof loginSchema>;
 
@@ -23,30 +24,22 @@ export default function StudentLogin() {
   });
 
   async function onSubmit(data: LoginFormData) {
-    try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
+    setError('');
+    // Use NextAuth credentials provider so server can read the session
+    const res = await signIn('student-credentials', {
+      redirect: false,
+      studentNumber: data.studentNumber,
+      password: data.password,
+      // You can set callbackUrl here if you want automatic redirect
+    });
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || 'Login failed');
-      }
-
-      // Store token in localStorage or use a secure cookie
-      localStorage.setItem('token', result.token);
-      localStorage.setItem('user', JSON.stringify(result.user));
-
-      setSuccess(true);
-      router.push('/dashboard');
-    } catch (err) {
+    if (res?.error) {
       setError('Login failed. Please check your credentials.');
+      return;
     }
+
+    setSuccess(true);
+    router.push('/dashboard');
   }
 
   if (success) {
