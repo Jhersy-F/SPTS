@@ -5,11 +5,12 @@ import { SessionStrategy, DefaultSession, Session } from 'next-auth';
 import { AdapterUser } from 'next-auth/adapters';
 import { JWT } from 'next-auth/jwt';
 import { AuthOptions } from 'next-auth';
+import { User } from '@/types';
 
 declare module 'next-auth' {
   interface User {
     id: string;
-    name: string | null;
+    lastName: string | null;
     firstName: string | null;
     studentNumber?: string | null;
     role: 'student' | 'instructor';
@@ -22,6 +23,9 @@ declare module 'next-auth' {
   interface JWT {
     id: string;
     role: 'student' | 'instructor';
+    firstName: string | null;
+    lastName: string | null;
+    studentNumber?: string | null;
   }
 }
 
@@ -110,6 +114,9 @@ export const authOptions: AuthOptions = {
       if (user) {
         token.id = user.id;
         token.role = user.role as 'student' | 'instructor';
+        token.firstName = user.firstName;
+        token.lastName = user.lastName;
+        token.studentNumber = user.studentNumber;
       }
       return token;
     },
@@ -117,6 +124,18 @@ export const authOptions: AuthOptions = {
       if (session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as 'student' | 'instructor';
+        session.user.firstName = token.firstName as string | null;
+        session.user.lastName = token.lastName as string | null;
+        session.user.studentNumber = token.studentNumber as string | null | undefined;
+        // Remove the default NextAuth properties that we don't need
+        const userWithoutDefaults = {
+          id: session.user.id,
+          role: session.user.role,
+          firstName: session.user.firstName,
+          lastName: session.user.lastName,
+          studentNumber: session.user.studentNumber
+        };
+        session.user = userWithoutDefaults;
       }
       return session;
     }

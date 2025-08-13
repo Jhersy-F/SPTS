@@ -14,6 +14,11 @@ export const sidebarLinks = [
     route: "/upload",
     label: "Upload",
   },
+  {
+    
+    route: "/profile",
+    label: "Profile",
+  },
  {
     
     route: "/instructor",

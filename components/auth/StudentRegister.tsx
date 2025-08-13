@@ -4,18 +4,10 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { studentSchema } from '@/lib/validations';
 import * as z from 'zod';
 
-const studentSchema = z.object({
-  studentNumber: z.string().min(1, 'Student number is required'),
-  firstName: z.string().min(1, 'First name is required'),
-  lastName: z.string().min(1, 'Last name is required'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
-  confirmPassword: z.string(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ['confirmPassword'],
-});
+
 
 export default function StudentRegister() {
   const router = useRouter();

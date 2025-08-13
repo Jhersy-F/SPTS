@@ -22,7 +22,7 @@ const home = () => {
             <div>
               <h2 className="text-xl font-semibold mb-4">Login</h2>
               <Link 
-                href="/login"
+                href="/login/student"
                 className="block w-full bg-blue-500 text-white py-3 px-6 rounded-lg hover:bg-blue-600 text-center"
               >
                 Login

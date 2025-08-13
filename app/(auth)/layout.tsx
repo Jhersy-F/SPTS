@@ -25,7 +25,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
             STUDENT PERFORMANCE TRACKING SYSTEM FOR COMPUTER SCIENCE STUDENTS OF PSULC
           </p>
         </section>
-        <section className="light-border background-light800_dark200 shadow-light100_dark100 min-w-full rounded-[10px] border px-4 py-10 shadow-md sm:min-w-[400px] sm:px-8 w-[500px] self-center">
+        <section className=" px-4 py-10 sm:min-w-[400px] sm:px-8 w-[500px] self-center">
           {children}
         </section>
       </main>

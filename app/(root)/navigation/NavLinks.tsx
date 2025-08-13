@@ -21,44 +21,48 @@ const NavLinks = ({
   return (
     <>
       {sidebarLinks.map((item) => {
-        const isActive =
-          (pathname.includes(item.route) && item.route.length > 1) ||
-          pathname === item.route;
-
-        if (item.route === "/profile") {
-          if (userId) item.route = `${item.route}/${userId}`;
-          else return null;
+        // Create a copy of the item to avoid mutating the original
+        const linkItem = { ...item };
+        
+        // Handle profile route with userId
+        if (linkItem.route === "/profile") {
+          if (userId) {
+            linkItem.route = `${linkItem.route}`;
+          } else {
+            return null;
+          }
         }
+
+        const isActive =
+          (pathname.includes(linkItem.route) && linkItem.route.length > 1) ||
+          pathname === linkItem.route;
 
         const LinkComponent = (
           <Link
-            href={item.route}
-            key={item.label}
+            href={linkItem.route}
+            key={linkItem.label}
             className={cn(
-              isActive
-                ? "primary-gradient rounded-lg text-light-900 "
-                : "text-white",
-              " gap-5 bg-transparent  text-white "
+              "gap-5 bg-transparent text-white",
+              isActive && "primary-gradient rounded-lg"
             )}
           >
-         
             <p
               className={cn(
-                isActive ? "base-bold" : "base-medium",
-                !isMobileNav && "max-lg:hidden"
+                "max-lg:hidden",
+                isActive ? "base-bold" : "base-medium"
               )}
             >
-              {item.label}
+              {linkItem.label}
             </p>
           </Link>
         );
 
         return isMobileNav ? (
-          <SheetClose asChild key={item.route}>
+          <SheetClose asChild key={linkItem.route}>
             {LinkComponent}
           </SheetClose>
         ) : (
-          <React.Fragment key={item.route}>{LinkComponent}</React.Fragment>
+          <React.Fragment key={linkItem.route}>{LinkComponent}</React.Fragment>
         );
       })}
     </>

@@ -48,6 +48,8 @@ export async function POST(request: Request) {
     const file = formData.get('file') as File;
     const title = formData.get('title') as string;
     const description = formData.get('description') as string;
+    const instructor = formData.get('instructor') as string;
+    const subject = formData.get('subject') as string;
 
     if (!file) {
       return NextResponse.json(
@@ -79,12 +81,25 @@ export async function POST(request: Request) {
     // Save file
     await fs.writeFile(filePath, Buffer.from(await file.arrayBuffer()));
 
+    // Determine file type based on extension
+    let fileType = 'Unknown';
+    if (lowerName.endsWith('.pdf')) {
+      fileType = 'PDF';
+    } else if (lowerName.endsWith('.doc')) {
+      fileType = 'DOC';
+    } else if (lowerName.endsWith('.docx')) {
+      fileType = 'DOCX';
+    }
+
     // Create upload record in database
     const upload = await prisma.upload.create({
       data: {
         title,
         description,
+        type: fileType,
         link: `/uploads/${uniqueFileName}`,
+        instructor,
+        subject,
         studentId: Number(session.user.id),
       },
     });

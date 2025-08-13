@@ -27,7 +27,12 @@ export async function PATCH(
 
     const id = parseId(params.id);
     const body = await request.json();
-    const { title, description } = body as { title?: string; description?: string };
+    const { title, description, instructor, subject } = body as { 
+      title?: string; 
+      description?: string; 
+      instructor?: string; 
+      subject?: string; 
+    };
 
     // Ensure ownership
     const existing = await prisma.upload.findUnique({ where: { id } });
@@ -40,6 +45,8 @@ export async function PATCH(
       data: {
         ...(title !== undefined ? { title } : {}),
         ...(description !== undefined ? { description } : {}),
+        ...(instructor !== undefined ? { instructor } : {}),
+        ...(subject !== undefined ? { subject } : {}),
       },
     });
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -8,15 +8,31 @@ import * as z from 'zod';
 const uploadSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   description: z.string().min(1, 'Description is required'),
+  instructor: z.string().min(1, 'Instructor is required'),
+  subject: z.string().min(1, 'Subject is required'),
   // Make optional so RHF/Zod doesn't block onSubmit; we'll validate manually
   file: z.custom<File | undefined | null>(() => true).optional(),
 });
+ 
+ type UploadFormProps = {
+   onSuccess?: () => void;
+   onCancel?: () => void;
+ };
+ 
+type Instructor = {
+  id: number;
+  firstName: string;
+  lastName: string;
+  username: string;
+};
 
-export default function UploadForm() {
+export default function UploadForm({ onSuccess, onCancel }: UploadFormProps) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [localFile, setLocalFile] = useState<File | null>(null);
+  const [instructors, setInstructors] = useState<Instructor[]>([]);
+  const [loadingInstructors, setLoadingInstructors] = useState(true);
 
 
   const {
@@ -27,8 +43,34 @@ export default function UploadForm() {
     formState: { errors },
   } = useForm<z.infer<typeof uploadSchema>>({
     resolver: zodResolver(uploadSchema),
-    defaultValues: { title: '', description: '', file: undefined as unknown as File },
+    defaultValues: { 
+      title: '', 
+      description: '', 
+      instructor: '', 
+      subject: '', 
+      file: undefined as unknown as File 
+    },
   });
+
+  // Load instructors on component mount
+  useEffect(() => {
+    const loadInstructors = async () => {
+      try {
+        const response = await fetch('/api/instructors');
+        const data = await response.json();
+        if (response.ok) {
+          setInstructors(data.instructors || []);
+        } else {
+          console.error('Failed to load instructors:', data.error);
+        }
+      } catch (error) {
+        console.error('Error loading instructors:', error);
+      } finally {
+        setLoadingInstructors(false);
+      }
+    };
+    loadInstructors();
+  }, []);
 
   const selectedFile = watch('file');
 
@@ -51,6 +93,8 @@ export default function UploadForm() {
       const formData = new FormData();
       formData.append('title', data.title);
       formData.append('description', data.description);
+      formData.append('instructor', data.instructor);
+      formData.append('subject', data.subject);
       formData.append('file', fileToSend);
 
       const response = await fetch('/api/uploads', {
@@ -65,6 +109,8 @@ export default function UploadForm() {
       }
 
       setSuccess(true);
+      // Notify parent so it can refresh list and/or hide the form
+      onSuccess?.();
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Upload failed. Please try again.';
       setError(msg);
@@ -117,6 +163,43 @@ export default function UploadForm() {
         </div>
 
         <div>
+          <label className="block text-sm font-medium mb-1">Instructor</label>
+          <select
+            {...register('instructor')}
+            className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            disabled={loadingInstructors}
+          >
+            <option value="">Select an instructor</option>
+            {instructors.map((instructor) => (
+              <option key={instructor.id} value={`${instructor.firstName} ${instructor.lastName}`}>
+                {instructor.firstName} {instructor.lastName} 
+              </option>
+            ))}
+          </select>
+          {errors.instructor && (
+            <p className="text-red-500 text-sm mt-1">{errors.instructor.message}</p>
+          )}
+          {loadingInstructors && (
+            <p className="text-gray-500 text-sm mt-1">Loading instructors...</p>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">Subject</label>
+          <select
+            {...register('subject')}
+            className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">Select a subject</option>
+            <option value="subject1">Subject 1</option>
+            <option value="subject2">Subject 2</option>
+          </select>
+          {errors.subject && (
+            <p className="text-red-500 text-sm mt-1">{errors.subject.message}</p>
+          )}
+        </div>
+
+        <div>
           <label htmlFor="upload-file" className="block text-sm font-medium mb-1">File</label>
           <Controller
             name="file"
@@ -148,13 +231,25 @@ export default function UploadForm() {
           )}
         </div>
 
-        <button
-          type="submit"
-          disabled={submitting}
-          className="w-full bg-blue-500 disabled:bg-blue-300 text-white py-2 px-4 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
-        >
-          {submitting ? 'Uploading…' : 'Upload Document'}
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            type="submit"
+            disabled={submitting}
+            className="bg-blue-500 disabled:bg-blue-300 text-white py-2 px-4 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+          >
+            {submitting ? 'Uploading…' : 'Upload Document'}
+          </button>
+          {onCancel && (
+            <button
+              type="button"
+              onClick={onCancel}
+              disabled={submitting}
+              className="bg-gray-200 text-gray-800 py-2 px-4 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400"
+            >
+              Cancel
+            </button>
+          )}
+        </div>
       </form>
     </div>
   );

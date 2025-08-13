@@ -12,7 +12,7 @@ export function middleware(request: NextRequest) {
   
   // Check if token exists
   if (!token) {
-    return NextResponse.redirect(new URL('/login/student', request.url));
+   // return NextResponse.redirect(new URL('/login/student', request.url));
   }
 
   return NextResponse.next();

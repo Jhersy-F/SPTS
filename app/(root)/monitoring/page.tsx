@@ -25,7 +25,7 @@ const Monitoring = () => {
           <tbody className="divide-y divide-gray-200"> 
             <tr className="hover:bg-gray-100 transition-colors duration-200">
               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800">Activity</td>  
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">150</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">15</td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700"> 
                 <button className="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">View</button>
               </td>

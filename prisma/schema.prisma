@@ -21,7 +21,10 @@ model Upload {
   id          Int      @id @default(autoincrement())
   title       String   @db.VarChar(255)
   description String   @db.VarChar(255)
+  type        String   @db.VarChar(100)
   link        String   @db.VarChar(255)
+  instructor  String   @db.VarChar(255)
+  subject     String   @db.VarChar(255)
   student     Student  @relation(fields: [studentId], references: [id])
   studentId   Int
 }

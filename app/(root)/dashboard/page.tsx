@@ -13,18 +13,40 @@ export default async function DashboardPage() {
     <div className="min-h-screen bg-gray-100">
       <div className="container mx-auto px-4 py-16">
         <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-8">
-          <h1 className="text-3xl font-bold mb-8">Welcome, {session.user.firstName}</h1>
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold text-gray-800 mb-2">
+              Welcome, {session.user.name || session.user.firstName}!
+            </h1>
+            <p className="text-xl text-gray-600">
+              Student Number: {session.user.studentNumber || session.user.id}
+            </p>
+          </div>
           <div className="space-y-6">
-            <div className="p-6 bg-white rounded-lg shadow">
-              <h2 className="text-xl font-semibold mb-4">Your Dashboard</h2>
-              <div className="space-y-4">
-                <div>
-                  <h3 className="font-medium">Student Number:</h3>
-                  <p className="text-gray-600">{session.user.id}</p>
+            <div className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg shadow">
+              <h2 className="text-2xl font-semibold mb-4 text-gray-800">Your Dashboard</h2>
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="bg-white p-4 rounded-lg shadow-sm">
+                  <h3 className="font-semibold text-gray-700 mb-2">Student Information</h3>
+                  <div className="space-y-2">
+                    <div>
+                      <span className="font-medium text-gray-600">Full Name:</span>
+                      <p className="text-gray-800">{session.user.name || `${session.user.firstName}`}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Student Number:</span>
+                      <p className="text-gray-800">{session.user.studentNumber}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Role:</span>
+                      <p className="text-gray-800 capitalize">{session.user.role}</p>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-medium">Role:</h3>
-                  <p className="text-gray-600">{session.user.role}</p>
+                <div className="bg-white p-4 rounded-lg shadow-sm">
+                  <h3 className="font-semibold text-gray-700 mb-2">Quick Actions</h3>
+                  <div className="space-y-2">
+                    <p className="text-gray-600">Access your student portal features and manage your academic information.</p>
+                  </div>
                 </div>
               </div>
             </div>
