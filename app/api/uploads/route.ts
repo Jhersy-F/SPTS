@@ -48,6 +48,7 @@ export async function POST(request: Request) {
     const file = formData.get('file') as File;
     const title = formData.get('title') as string;
     const description = formData.get('description') as string;
+    const type = formData.get('type') as string;
     const instructor = formData.get('instructor') as string;
     const subject = formData.get('subject') as string;
 
@@ -81,14 +82,12 @@ export async function POST(request: Request) {
     // Save file
     await fs.writeFile(filePath, Buffer.from(await file.arrayBuffer()));
 
-    // Determine file type based on extension
-    let fileType = 'Unknown';
-    if (lowerName.endsWith('.pdf')) {
-      fileType = 'PDF';
-    } else if (lowerName.endsWith('.doc')) {
-      fileType = 'DOC';
-    } else if (lowerName.endsWith('.docx')) {
-      fileType = 'DOCX';
+    // Validate the type field
+    if (!type || !['quiz', 'activity', 'exam'].includes(type.toLowerCase())) {
+      return NextResponse.json(
+        { error: 'Invalid type. Must be quiz, activity, or exam.' },
+        { status: 400 }
+      );
     }
 
     // Create upload record in database
@@ -96,7 +95,7 @@ export async function POST(request: Request) {
       data: {
         title,
         description,
-        type: fileType,
+        type: type.toLowerCase(),
         link: `/uploads/${uniqueFileName}`,
         instructor,
         subject,

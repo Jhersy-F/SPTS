@@ -10,22 +10,22 @@ const home = () => {
           
           <div className="space-y-6">
             <div>
-              <h2 className="text-xl font-semibold mb-4">Student Registration</h2>
+              <h2 className="text-xl font-semibold mb-4">Instructor</h2>
               <Link 
-                href="/register"
+                href="/login/instructor"
                 className="block w-full bg-blue-500 text-white py-3 px-6 rounded-lg hover:bg-blue-600 text-center"
               >
-                Register as Student
+                Instructor
               </Link>
             </div>
 
             <div>
-              <h2 className="text-xl font-semibold mb-4">Login</h2>
+              <h2 className="text-xl font-semibold mb-4">Student</h2>
               <Link 
                 href="/login/student"
                 className="block w-full bg-blue-500 text-white py-3 px-6 rounded-lg hover:bg-blue-600 text-center"
               >
-                Login
+                Student
               </Link>
             </div>
           </div>

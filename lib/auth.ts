@@ -1,4 +1,5 @@
 import CredentialsProvider from 'next-auth/providers/credentials';
+import NextAuth from 'next-auth';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { SessionStrategy, DefaultSession, Session } from 'next-auth';
@@ -141,4 +142,8 @@ export const authOptions: AuthOptions = {
     }
   }
 };
+
+const { auth, signIn, signOut } = NextAuth(authOptions);
+
+export { auth, signIn, signOut };
 

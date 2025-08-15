@@ -1,7 +1,7 @@
 export const sidebarLinks = [
   {
   
-    route: "/",
+    route: "/dashboard",
     label: "Home",
   },
   {
@@ -19,9 +19,5 @@ export const sidebarLinks = [
     route: "/profile",
     label: "Profile",
   },
- {
-    
-    route: "/instructor",
-    label: "Instructor",
-  },
+
 ];

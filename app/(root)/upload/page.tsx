@@ -144,11 +144,9 @@ const Upload = () => {
                 className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="all">All Types</option>
-                {getUniqueTypes().map((type) => (
-                  <option key={type} value={type}>
-                    {type}
-                  </option>
-                ))}
+                <option value="quiz">Quiz</option>
+                <option value="activity">Activity</option>
+                <option value="exam">Exam</option>
               </select>
             </div>
           </div>

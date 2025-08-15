@@ -8,6 +8,9 @@ import * as z from 'zod';
 const uploadSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   description: z.string().min(1, 'Description is required'),
+  type: z.enum(['quiz', 'activity', 'exam'], {
+    required_error: 'Type is required',
+  }),
   instructor: z.string().min(1, 'Instructor is required'),
   subject: z.string().min(1, 'Subject is required'),
   // Make optional so RHF/Zod doesn't block onSubmit; we'll validate manually
@@ -35,20 +38,23 @@ export default function UploadForm({ onSuccess, onCancel }: UploadFormProps) {
   const [loadingInstructors, setLoadingInstructors] = useState(true);
 
 
+  type FormData = z.infer<typeof uploadSchema>;
+
   const {
     register,
     handleSubmit,
     control,
     watch,
     formState: { errors },
-  } = useForm<z.infer<typeof uploadSchema>>({
+  } = useForm<FormData>({
     resolver: zodResolver(uploadSchema),
     defaultValues: { 
       title: '', 
       description: '', 
+      type: undefined,
       instructor: '', 
       subject: '', 
-      file: undefined as unknown as File 
+      file: undefined 
     },
   });
 
@@ -93,6 +99,7 @@ export default function UploadForm({ onSuccess, onCancel }: UploadFormProps) {
       const formData = new FormData();
       formData.append('title', data.title);
       formData.append('description', data.description);
+      formData.append('type', data.type);
       formData.append('instructor', data.instructor);
       formData.append('subject', data.subject);
       formData.append('file', fileToSend);
@@ -159,6 +166,22 @@ export default function UploadForm({ onSuccess, onCancel }: UploadFormProps) {
           />
           {errors.description && (
             <p className="text-red-500 text-sm mt-1">{errors.description.message}</p>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">Type</label>
+          <select
+            {...register('type')}
+            className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">Select a type</option>
+            <option value="quiz">Quiz</option>
+            <option value="activity">Activity</option>
+            <option value="exam">Exam</option>
+          </select>
+          {errors.type && (
+            <p className="text-red-500 text-sm mt-1">{errors.type.message}</p>
           )}
         </div>
 
