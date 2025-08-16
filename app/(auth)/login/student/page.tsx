@@ -1,5 +1,6 @@
 import React from 'react';
 import StudentLogin from '@/components/auth/StudentLogin';
+import Link from 'next/link';
 
 export default function StudentLoginPage() {
   return (
@@ -9,6 +10,10 @@ export default function StudentLoginPage() {
           <div className="space-y-6">
             <h1 className="text-3xl font-bold text-center mb-8">Student Login</h1>
             <StudentLogin />
+            <div className="text-center text-sm text-gray-600">
+              <span>Don&apos;t have an account? </span>
+              <Link href="/register" className="text-blue-600 hover:underline">Register</Link>
+            </div>
           </div>
         </div>
       </div>
