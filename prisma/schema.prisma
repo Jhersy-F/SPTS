@@ -23,7 +23,8 @@ model Upload {
   description String   @db.VarChar(255)
   type        String   @db.VarChar(100)
   link        String   @db.VarChar(255)
-  instructor  String   @db.VarChar(255)
+  instructor  Instructor @relation(fields: [instructorID], references: [id])
+  instructorID Int
   subject     String   @db.VarChar(255)
   student     Student  @relation(fields: [studentId], references: [id])
   studentId   Int
@@ -35,4 +36,5 @@ model Instructor {
   password  String   @db.VarChar(255)
   firstName String   @db.VarChar(255)
   lastName  String   @db.VarChar(255)
+  uploads   Upload[]
 }

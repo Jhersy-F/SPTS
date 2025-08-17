@@ -11,7 +11,7 @@ const uploadSchema = z.object({
   type: z.enum(['quiz', 'activity', 'exam'], {
     required_error: 'Type is required',
   }),
-  instructor: z.string().min(1, 'Instructor is required'),
+  instructorID: z.string().min(1, 'Instructor is required'),
   subject: z.string().min(1, 'Subject is required'),
   // Make optional so RHF/Zod doesn't block onSubmit; we'll validate manually
   file: z.custom<File | undefined | null>(() => true).optional(),
@@ -52,7 +52,7 @@ export default function UploadForm({ onSuccess, onCancel }: UploadFormProps) {
       title: '', 
       description: '', 
       type: undefined,
-      instructor: '', 
+      instructorID: '', 
       subject: '', 
       file: undefined 
     },
@@ -100,7 +100,7 @@ export default function UploadForm({ onSuccess, onCancel }: UploadFormProps) {
       formData.append('title', data.title);
       formData.append('description', data.description);
       formData.append('type', data.type);
-      formData.append('instructor', data.instructor);
+      formData.append('instructorID', data.instructorID);
       formData.append('subject', data.subject);
       formData.append('file', fileToSend);
 
@@ -188,19 +188,19 @@ export default function UploadForm({ onSuccess, onCancel }: UploadFormProps) {
         <div>
           <label className="block text-sm font-medium mb-1">Instructor</label>
           <select
-            {...register('instructor')}
+            {...register('instructorID')}
             className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             disabled={loadingInstructors}
           >
             <option value="">Select an instructor</option>
             {instructors.map((instructor) => (
-              <option key={instructor.id} value={`${instructor.firstName} ${instructor.lastName}`}>
+              <option key={instructor.id} value={String(instructor.id)}>
                 {instructor.firstName} {instructor.lastName} 
               </option>
             ))}
           </select>
-          {errors.instructor && (
-            <p className="text-red-500 text-sm mt-1">{errors.instructor.message}</p>
+          {errors.instructorID && (
+            <p className="text-red-500 text-sm mt-1">{errors.instructorID.message}</p>
           )}
           {loadingInstructors && (
             <p className="text-gray-500 text-sm mt-1">Loading instructors...</p>

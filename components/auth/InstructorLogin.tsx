@@ -32,10 +32,10 @@ export default function InstructorLogin() {
   });
 
   // Redirect if already logged in
-  if (user?.role === 'instructor') {
-    router.push('/instructor/dashboard');
-    return null;
-  }
+  //if (user?.role === 'instructor') {
+   // router.push('/instructor/dashboard');
+    //return null;
+ // }
 
   async function onSubmit(data: LoginFormData) {
     try {

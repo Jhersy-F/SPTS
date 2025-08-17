@@ -21,12 +21,26 @@ export async function GET() {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const uploads = await prisma.upload.findMany({
+    const uploadsRaw = await prisma.upload.findMany({
       where: { studentId: Number(session.user.id) },
       orderBy: { id: 'desc' },
+      include: {
+        instructor: { select: { firstName: true, lastName: true } },
+      },
     });
 
-    return NextResponse.json({ uploads });
+    // Flatten response to keep existing client expectations
+    const responseUploads = uploadsRaw.map(u => ({
+      id: u.id,
+      title: u.title,
+      description: u.description,
+      type: u.type,
+      link: u.link,
+      subject: u.subject,
+      instructor: u.instructor ? `${u.instructor.firstName} ${u.instructor.lastName}` : '-',
+    }));
+
+    return NextResponse.json({ uploads: responseUploads });
   } catch (error) {
     console.error('List uploads error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -49,7 +63,7 @@ export async function POST(request: Request) {
     const title = formData.get('title') as string;
     const description = formData.get('description') as string;
     const type = formData.get('type') as string;
-    const instructor = formData.get('instructor') as string;
+    const instructorID = formData.get('instructorID') as string; // expecting numeric string
     const subject = formData.get('subject') as string;
 
     if (!file) {
@@ -90,6 +104,14 @@ export async function POST(request: Request) {
       );
     }
 
+    // Validate instructorID
+    if (!instructorID || isNaN(Number(instructorID))) {
+      return NextResponse.json(
+        { error: 'Invalid instructorID. It must be a number.' },
+        { status: 400 }
+      );
+    }
+
     // Create upload record in database
     const upload = await prisma.upload.create({
       data: {
@@ -97,7 +119,7 @@ export async function POST(request: Request) {
         description,
         type: type.toLowerCase(),
         link: `/uploads/${uniqueFileName}`,
-        instructor,
+        instructorID: Number(instructorID),
         subject,
         studentId: Number(session.user.id),
       },
