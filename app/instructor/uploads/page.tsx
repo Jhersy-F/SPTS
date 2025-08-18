@@ -14,6 +14,7 @@ interface Student {
   id: string | number;
   firstName?: string | null;
   lastName?: string | null;
+  studentNumber?: string | null;
   uploads?: Upload[];
 }
 
@@ -21,6 +22,9 @@ export default function InstructorUploadsPage() {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [query, setQuery] = useState<string>("");
+  const [subjectFilter, setSubjectFilter] = useState<string>("");
+  const [typeFilter, setTypeFilter] = useState<string>("");
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -54,6 +58,7 @@ export default function InstructorUploadsPage() {
       return (s.uploads ?? []).map((u) => ({
         key: `${s.id}-${u.id}`,
         name,
+        studentNumber: s.studentNumber ?? '—',
         title: u.title ?? '—',
         type: u.type ?? '—',
         subject: u.subject ?? '—',
@@ -61,6 +66,30 @@ export default function InstructorUploadsPage() {
       }));
     });
   }, [students]);
+
+  const subjects = useMemo(() => {
+    const set = new Set<string>();
+    rows.forEach((r) => r.subject && set.add(r.subject));
+    return Array.from(set).sort();
+  }, [rows]);
+
+  const types = useMemo(() => {
+    const set = new Set<string>();
+    rows.forEach((r) => r.type && set.add(r.type));
+    return Array.from(set).sort();
+  }, [rows]);
+
+  const filteredRows = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return rows.filter((r) => {
+      const matchQuery = !q
+        ? true
+        : `${r.name} ${r.studentNumber ?? ''}`.toLowerCase().includes(q);
+      const matchSubject = !subjectFilter || r.subject === subjectFilter;
+      const matchType = !typeFilter || r.type === typeFilter;
+      return matchQuery && matchSubject && matchType;
+    });
+  }, [rows, query, subjectFilter, typeFilter]);
 
   if (loading) {
     return (
@@ -84,6 +113,39 @@ export default function InstructorUploadsPage() {
     <div className="p-4 bg-white min-h-screen text-gray-900">
       <h1 className="text-3xl font-bold mb-6 text-center text-gray-800">Uploads</h1>
 
+      <div className="w-4/5 mx-auto mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search by Student Number or Name..."
+          className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          aria-label="Search by Student Number or Name"
+        />
+        <select
+          value={subjectFilter}
+          onChange={(e) => setSubjectFilter(e.target.value)}
+          className="px-3 py-2 border border-gray-300 rounded-md bg-white"
+          aria-label="Filter by Subject"
+        >
+          <option value="">All Subjects</option>
+          {subjects.map((s) => (
+            <option key={s} value={s}>{s}</option>
+          ))}
+        </select>
+        <select
+          value={typeFilter}
+          onChange={(e) => setTypeFilter(e.target.value)}
+          className="px-3 py-2 border border-gray-300 rounded-md bg-white"
+          aria-label="Filter by Type"
+        >
+          <option value="">All Types</option>
+          {types.map((t) => (
+            <option key={t} value={t}>{t}</option>
+          ))}
+        </select>
+      </div>
+
       <div className="overflow-x-auto bg-white rounded-lg shadow-md w-4/5 mx-auto">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-100">
@@ -106,7 +168,7 @@ export default function InstructorUploadsPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {rows.map((r) => (
+            {filteredRows.map((r) => (
               <tr key={r.key} className="hover:bg-gray-100 transition-colors duration-200">
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800">{r.name}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{r.title}</td>

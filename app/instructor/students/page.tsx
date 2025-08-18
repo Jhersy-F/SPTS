@@ -10,7 +10,7 @@ interface Student {
   id: string | number;
   firstName?: string | null;
   lastName?: string | null;
-  username?: string | null;
+  studentNumber?: string | null;
   uploads?: Upload[];
 }
 
@@ -18,6 +18,7 @@ export default function InstructorStudentsPage() {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [query, setQuery] = useState<string>('');
 
   useEffect(() => {
     const fetchStudents = async () => {
@@ -66,10 +67,26 @@ export default function InstructorStudentsPage() {
     );
   }
 
+  const filteredStudents = students.filter((s) => {
+    const q = query.trim().toLowerCase();
+    if (!q) return true;
+    const haystack = `${s.firstName ?? ''} ${s.lastName ?? ''} ${s.studentNumber ?? ''}`.toLowerCase();
+    return haystack.includes(q);
+  });
+
   return (
     <div className="p-4 bg-white min-h-screen text-gray-900">
       <h1 className="text-3xl font-bold mb-6 text-center text-gray-800">Students</h1>
-
+      <div className="w-4/5 mx-auto mb-4">
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search by Student Number or Name..."
+          className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          aria-label="Search by Student Number or Name"
+        />
+      </div>
       <div className="overflow-x-auto bg-white rounded-lg shadow-md w-4/5 mx-auto">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-100">
@@ -78,7 +95,7 @@ export default function InstructorStudentsPage() {
                 Name
               </th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                Username
+                Student Number
               </th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                 Total Uploads
@@ -86,9 +103,9 @@ export default function InstructorStudentsPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {students.map((s) => {
+            {filteredStudents.map((s) => {
               const name = `${s.firstName ?? ''} ${s.lastName ?? ''}`.trim() || '—';
-              const username = s.username || '—';
+              const username = s.studentNumber || '—';
               const uploadsCount = Array.isArray(s.uploads) ? s.uploads.length : 0;
               return (
                 <tr key={String(s.id)} className="hover:bg-gray-100 transition-colors duration-200">

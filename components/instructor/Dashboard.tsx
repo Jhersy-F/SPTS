@@ -1,7 +1,5 @@
 "use client"
 import { useState, useEffect } from 'react';
-import { useUser } from '../../lib/useUser';
-import Link from 'next/link';
 
 type Student = {
   id: number;
@@ -19,7 +17,6 @@ type Student = {
 export default function InstructorDashboard() {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
-  const { user } = useUser();
 
   useEffect(() => {
     fetchStudents();
@@ -41,49 +38,21 @@ export default function InstructorDashboard() {
     return <div>Loading...</div>;
   }
 
+  const totalStudents = students.length;
+  const totalUploads = students.reduce((sum, s) => sum + (s.uploads?.length ?? 0), 0);
+
   return (
     <div className="p-6">
       <h1 className="text-3xl font-bold mb-6">Instructor Dashboard</h1>
-      
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold mb-4">Student Documents</h2>
-        
-        {students.length === 0 ? (
-          <p>No students found.</p>
-        ) : (
-          <div className="space-y-4">
-            {students.map((student) => (
-              <div key={student.id} className="border rounded-lg p-4">
-                <h3 className="font-semibold">{`${student.firstName} ${student.lastName}`}</h3>
-                <p className="text-gray-600">Student Number: {student.studentNumber}</p>
-                
-                <div className="mt-3">
-                  <h4 className="font-medium mb-2">Uploaded Documents:</h4>
-                  {student.uploads.length === 0 ? (
-                    <p>No documents uploaded.</p>
-                  ) : (
-                    <ul className="space-y-2">
-                      {student.uploads.map((upload) => (
-                        <li key={upload.id} className="flex items-center justify-between">
-                          <div>
-                            <span className="font-medium">{upload.title}</span>
-                            <p className="text-sm text-gray-600">{upload.description}</p>
-                          </div>
-                          <Link 
-                            href={upload.link}
-                            className="text-blue-500 hover:text-blue-700"
-                          >
-                            View Document
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-sm font-medium text-gray-500">Total Students</h2>
+          <p className="mt-2 text-4xl font-bold text-gray-900">{totalStudents}</p>
+        </div>
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-sm font-medium text-gray-500">Total Uploads</h2>
+          <p className="mt-2 text-4xl font-bold text-gray-900">{totalUploads}</p>
+        </div>
       </div>
     </div>
   );

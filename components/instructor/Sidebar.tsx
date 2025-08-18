@@ -10,6 +10,7 @@ const nav = [
   { href: '/instructor/dashboard', label: 'Home' },
   { href: '/instructor/students', label: 'Students' },
   { href: '/instructor/uploads', label: 'Uploads' },
+  { href: '/instructor/profile', label: 'Profile' },
 ];
 
 export default function Sidebar() {

@@ -1,5 +1,5 @@
 "use client"
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import UploadForm from "@/components/uploads/UploadForm";
 
 type UploadItem = {
@@ -23,25 +23,27 @@ const Upload = () => {
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [instructors, setInstructors] = useState<Array<{id:number; firstName:string; lastName:string; username:string}>>([]);
   const [loadingInstructors, setLoadingInstructors] = useState<boolean>(false);
+  const [query, setQuery] = useState<string>("");
 
-  const loadUploads = async () => {
+  const loadUploads = useCallback(async () => {
     try {
       setLoading(true);
       const res = await fetch("/api/uploads", { cache: "no-store" });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Failed to load uploads");
-      setUploads(data.uploads || []);
-      setFilteredUploads(data.uploads || []);
+      const list = data.uploads || [];
+      setUploads(list);
+      applyAllFilters(list, typeFilter, query);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load uploads");
     } finally {
       setLoading(false);
     }
-  };
+  }, [typeFilter, query]);
 
   useEffect(() => {
     loadUploads();
-  }, []);
+  }, [loadUploads]);
 
   // Load instructors for edit dropdowns
   useEffect(() => {
@@ -68,7 +70,7 @@ const Upload = () => {
     }
     const updatedUploads = uploads.filter((u) => u.id !== id);
     setUploads(updatedUploads);
-    applyTypeFilter(updatedUploads, typeFilter);
+    applyAllFilters(updatedUploads, typeFilter, query);
   };
 
   const startEdit = (u: UploadItem) => {
@@ -98,27 +100,33 @@ const Upload = () => {
     }
     const updatedUploads = uploads.map((u) => (u.id === id ? { ...u, ...data.upload } : u));
     setUploads(updatedUploads);
-    applyTypeFilter(updatedUploads, typeFilter);
+    applyAllFilters(updatedUploads, typeFilter, query);
     setEditingId(null);
   };
 
-  const applyTypeFilter = (uploadsList: UploadItem[], filter: string) => {
-    if (filter === "all") {
-      setFilteredUploads(uploadsList);
-    } else {
-      setFilteredUploads(uploadsList.filter(upload => upload.type === filter));
+  const applyAllFilters = (uploadsList: UploadItem[], filter: string, q: string) => {
+    let list = filter === "all" ? uploadsList : uploadsList.filter(upload => upload.type === filter);
+    const queryLc = q.trim().toLowerCase();
+    if (queryLc) {
+      list = list.filter(upload => (
+        `${upload.title} ${upload.description} ${upload.instructor ?? ''} ${upload.subject ?? ''} ${upload.type}`
+          .toLowerCase()
+          .includes(queryLc)
+      ));
     }
+    setFilteredUploads(list);
   };
 
   const handleTypeFilterChange = (filter: string) => {
     setTypeFilter(filter);
-    applyTypeFilter(uploads, filter);
+    applyAllFilters(uploads, filter, query);
   };
 
-  const getUniqueTypes = () => {
-    const types = uploads.map(upload => upload.type).filter(Boolean);
-    return [...new Set(types)];
-  };
+  useEffect(() => {
+    applyAllFilters(uploads, typeFilter, query);
+  }, [uploads, typeFilter, query]);
+
+  // Removed unused getUniqueTypes to satisfy ESLint
 
   return (
     <div className="p-4 bg-white min-h-screen text-gray-900">
@@ -127,30 +135,40 @@ const Upload = () => {
       <div className="max-w-3xl mx-auto mb-10">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <button
-              onClick={() => setShowForm(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          <button
+            onClick={() => setShowForm(true)}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Upload
+          </button>
+          <div className="flex items-center space-x-2">
+            <label htmlFor="typeFilter" className="text-sm font-medium text-gray-700">
+              Filter by Type:
+            </label>
+            <select
+              id="typeFilter"
+              value={typeFilter}
+              onChange={(e) => handleTypeFilterChange(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              Upload
-            </button>
-            <div className="flex items-center space-x-2">
-              <label htmlFor="typeFilter" className="text-sm font-medium text-gray-700">
-                Filter by Type:
-              </label>
-              <select
-                id="typeFilter"
-                value={typeFilter}
-                onChange={(e) => handleTypeFilterChange(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="all">All Types</option>
-                <option value="quiz">Quiz</option>
-                <option value="activity">Activity</option>
-                <option value="exam">Exam</option>
-              </select>
-            </div>
+              <option value="all">All Types</option>
+              <option value="quiz">Quiz</option>
+              <option value="activity">Activity</option>
+              <option value="exam">Exam</option>
+            </select>
           </div>
+        </div>
+        <div className="flex items-center space-x-3">
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search uploads..."
+            aria-label="Search uploads"
+            className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
           <button onClick={loadUploads} className="px-3 py-2 bg-gray-200 rounded hover:bg-gray-300">Refresh List</button>
+        </div>
         </div>
 
         {showForm && (
