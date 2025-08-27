@@ -14,9 +14,10 @@ export async function GET() {
     if (session.user.role !== 'instructor' && session.user.role !== 'student') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
-
+    const studentID = parseInt(session.user.id);
     // Get upload counts by type
     const uploadStats = await prisma.upload.groupBy({
+      where:{studentId:studentID},
       by: ['type'],
       _count: {
         id: true,
@@ -34,7 +35,9 @@ export async function GET() {
     });
 
     // Also get total count
-    const totalUploads = await prisma.upload.count();
+    const totalUploads = await prisma.upload.count({
+      where:{studentId:studentID}
+    });
 
     return NextResponse.json({ 
       stats,

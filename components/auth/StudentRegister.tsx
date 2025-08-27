@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { studentSchema } from '@/lib/validations';
+import  ROUTES  from '@/constants/routes';
 import * as z from 'zod';
 
 
@@ -40,7 +41,7 @@ export default function StudentRegister() {
       }
 
       setSuccess(true);
-      router.push('/login');
+      router.push(ROUTES.SIGN_IN);
     } catch (err) {
       setError('Registration failed. Please try again.');
     }
