@@ -3,7 +3,7 @@ export type User = {
   name?: string | null;
   email?: string | null;
   image?: string | null;
-  role: 'student' | 'instructor';
+  role: 'student' | 'instructor' | 'admin';
 };
 
 export type Student = {

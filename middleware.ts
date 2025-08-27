@@ -6,6 +6,7 @@ export function middleware(request: NextRequest) {
   
   // Allow public routes
   if (request.nextUrl.pathname.startsWith('/login/student') || 
+      request.nextUrl.pathname.startsWith('/login/admin') ||
       request.nextUrl.pathname.startsWith('/register')) {
     return NextResponse.next(); 
   }

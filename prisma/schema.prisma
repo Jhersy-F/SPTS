@@ -25,7 +25,8 @@ model Upload {
   link        String   @db.VarChar(255)
   instructor  Instructor @relation(fields: [instructorID], references: [id])
   instructorID Int
-  subject     String   @db.VarChar(255)
+  subject     Subject  @relation(fields: [subjectID], references: [subjectID])
+  subjectID   Int @default(1)
   student     Student  @relation(fields: [studentId], references: [id])
   studentId   Int
 }
@@ -37,4 +38,16 @@ model Instructor {
   firstName String   @db.VarChar(255)
   lastName  String   @db.VarChar(255)
   uploads   Upload[]
+}
+
+model Subject {
+  subjectID Int    @id @default(autoincrement())
+  title     String @db.VarChar(255)
+  uploads   Upload[]
+}
+
+model Admin {
+  adminID  Int    @id @default(autoincrement()) 
+  username String @unique @db.VarChar(255) @default("admin")
+  password String @db.VarChar(255) @default("admin")
 }

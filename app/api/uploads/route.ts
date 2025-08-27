@@ -26,6 +26,7 @@ export async function GET() {
       orderBy: { id: 'desc' },
       include: {
         instructor: { select: { firstName: true, lastName: true } },
+        subject: { select: { title: true, subjectID: true } },
       },
     });
 
@@ -36,7 +37,8 @@ export async function GET() {
       description: u.description,
       type: u.type,
       link: u.link,
-      subject: u.subject,
+      subject: u.subject?.title ?? '-',
+      subjectID: u.subjectID,
       instructor: u.instructor ? `${u.instructor.firstName} ${u.instructor.lastName}` : '-',
     }));
 
@@ -64,7 +66,7 @@ export async function POST(request: Request) {
     const description = formData.get('description') as string;
     const type = formData.get('type') as string;
     const instructorID = formData.get('instructorID') as string; // expecting numeric string
-    const subject = formData.get('subject') as string;
+    const subjectIDRaw = formData.get('subjectID') as string;
 
     if (!file) {
       return NextResponse.json(
@@ -74,13 +76,25 @@ export async function POST(request: Request) {
     }
 
     // Validate file type/extension (some browsers/OS may not set MIME correctly)
-    const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    const allowedTypes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'image/png',
+      'image/jpeg',
+    ];
     const lowerName = file.name.toLowerCase();
-    const extAllowed = lowerName.endsWith('.pdf') || lowerName.endsWith('.doc') || lowerName.endsWith('.docx');
+    const extAllowed =
+      lowerName.endsWith('.pdf') ||
+      lowerName.endsWith('.doc') ||
+      lowerName.endsWith('.docx') ||
+      lowerName.endsWith('.png') ||
+      lowerName.endsWith('.jpg') ||
+      lowerName.endsWith('.jpeg');
     const typeAllowed = allowedTypes.includes(file.type);
     if (!(typeAllowed || extAllowed)) {
       return NextResponse.json(
-        { error: 'Invalid file type. Only PDF and Word documents are allowed.' },
+        { error: 'Invalid file type. Allowed: PDF, Word (.doc/.docx), PNG, JPG/JPEG.' },
         { status: 400 }
       );
     }
@@ -112,6 +126,15 @@ export async function POST(request: Request) {
       );
     }
 
+    // Validate subjectID
+    const subjectID = Number(subjectIDRaw);
+    if (!subjectID || isNaN(subjectID)) {
+      return NextResponse.json(
+        { error: 'Invalid subjectID. It must be a number.' },
+        { status: 400 }
+      );
+    }
+
     // Create upload record in database
     const upload = await prisma.upload.create({
       data: {
@@ -120,7 +143,7 @@ export async function POST(request: Request) {
         type: type.toLowerCase(),
         link: `/uploads/${uniqueFileName}`,
         instructorID: Number(instructorID),
-        subject,
+        subjectID,
         studentId: Number(session.user.id),
       },
     });

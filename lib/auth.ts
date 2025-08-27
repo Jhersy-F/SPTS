@@ -6,7 +6,7 @@ import { SessionStrategy, DefaultSession, Session } from 'next-auth';
 import { AdapterUser } from 'next-auth/adapters';
 import { JWT } from 'next-auth/jwt';
 import { AuthOptions } from 'next-auth';
-import { User } from '@/types';
+ 
 
 declare module 'next-auth' {
   interface User {
@@ -14,7 +14,7 @@ declare module 'next-auth' {
     lastName: string | null;
     firstName: string | null;
     studentNumber?: string | null;
-    role: 'student' | 'instructor';
+    role: 'student' | 'instructor' | 'admin';
   }
 
   interface Session {
@@ -23,7 +23,7 @@ declare module 'next-auth' {
 
   interface JWT {
     id: string;
-    role: 'student' | 'instructor';
+    role: 'student' | 'instructor' | 'admin';
     firstName: string | null;
     lastName: string | null;
     studentNumber?: string | null;
@@ -101,6 +101,41 @@ export const authOptions: AuthOptions = {
           emailVerified: null
         };
       }
+    }),
+    CredentialsProvider({
+      id: 'admin-credentials',
+      name: 'Admin Credentials',
+      credentials: {
+        username: { label: 'Username', type: 'text' },
+        password: { label: 'Password', type: 'password' },
+      },
+      async authorize(credentials) {
+        const admin = await prisma.admin.findUnique({
+          where: { username: credentials?.username },
+        });
+
+        if (!admin) {
+          throw new Error('Invalid username');
+        }
+
+        if (!admin.password) {
+          throw new Error('No password found');
+        }
+
+       // const isPasswordValid = await bcrypt.compare(credentials?.password || '', admin.password);
+       // if (!isPasswordValid) {
+        //  throw new Error('Invalid password');
+        //}
+
+        return {
+          id: admin.adminID.toString(),
+          name: admin.username,
+          firstName: null,
+          lastName: null,
+          role: 'admin',
+          emailVerified: null,
+        };
+      },
     })
   ],
   session: {
@@ -114,7 +149,7 @@ export const authOptions: AuthOptions = {
     async jwt({ token, user }: { token: JWT; user: import('next-auth').User | AdapterUser | null; }) {
       if (user) {
         token.id = user.id;
-        token.role = user.role as 'student' | 'instructor';
+        token.role = user.role as 'student' | 'instructor' | 'admin';
         token.firstName = user.firstName;
         token.lastName = user.lastName;
         token.studentNumber = user.studentNumber;
@@ -124,7 +159,7 @@ export const authOptions: AuthOptions = {
     async session({ session, token }: { session: Session; token: JWT; user: AdapterUser }) {
       if (session.user) {
         session.user.id = token.id as string;
-        session.user.role = token.role as 'student' | 'instructor';
+        session.user.role = token.role as 'student' | 'instructor' | 'admin';
         session.user.firstName = token.firstName as string | null;
         session.user.lastName = token.lastName as string | null;
         session.user.studentNumber = token.studentNumber as string | null | undefined;

@@ -12,7 +12,7 @@ const uploadSchema = z.object({
     required_error: 'Type is required',
   }),
   instructorID: z.string().min(1, 'Instructor is required'),
-  subject: z.string().min(1, 'Subject is required'),
+  subjectID: z.string().min(1, 'Subject is required'),
   // Make optional so RHF/Zod doesn't block onSubmit; we'll validate manually
   file: z.custom<File | undefined | null>(() => true).optional(),
 });
@@ -29,6 +29,11 @@ type Instructor = {
   username: string;
 };
 
+type Subject = {
+  subjectID: number;
+  title: string;
+};
+
 export default function UploadForm({ onSuccess, onCancel }: UploadFormProps) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -36,6 +41,8 @@ export default function UploadForm({ onSuccess, onCancel }: UploadFormProps) {
   const [localFile, setLocalFile] = useState<File | null>(null);
   const [instructors, setInstructors] = useState<Instructor[]>([]);
   const [loadingInstructors, setLoadingInstructors] = useState(true);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [loadingSubjects, setLoadingSubjects] = useState(true);
 
 
   type FormData = z.infer<typeof uploadSchema>;
@@ -53,7 +60,7 @@ export default function UploadForm({ onSuccess, onCancel }: UploadFormProps) {
       description: '', 
       type: undefined,
       instructorID: '', 
-      subject: '', 
+      subjectID: '', 
       file: undefined 
     },
   });
@@ -75,7 +82,23 @@ export default function UploadForm({ onSuccess, onCancel }: UploadFormProps) {
         setLoadingInstructors(false);
       }
     };
+    const loadSubjects = async () => {
+      try {
+        const response = await fetch('/api/subjects');
+        const data = await response.json();
+        if (response.ok) {
+          setSubjects(data.subjects || []);
+        } else {
+          console.error('Failed to load subjects:', data.error);
+        }
+      } catch (error) {
+        console.error('Error loading subjects:', error);
+      } finally {
+        setLoadingSubjects(false);
+      }
+    };
     loadInstructors();
+    loadSubjects();
   }, []);
 
   const selectedFile = watch('file');
@@ -101,7 +124,7 @@ export default function UploadForm({ onSuccess, onCancel }: UploadFormProps) {
       formData.append('description', data.description);
       formData.append('type', data.type);
       formData.append('instructorID', data.instructorID);
-      formData.append('subject', data.subject);
+      formData.append('subjectID', data.subjectID);
       formData.append('file', fileToSend);
 
       const response = await fetch('/api/uploads', {
@@ -210,15 +233,22 @@ export default function UploadForm({ onSuccess, onCancel }: UploadFormProps) {
         <div>
           <label className="block text-sm font-medium mb-1">Subject</label>
           <select
-            {...register('subject')}
+            {...register('subjectID')}
             className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            disabled={loadingSubjects}
           >
             <option value="">Select a subject</option>
-            <option value="subject1">Subject 1</option>
-            <option value="subject2">Subject 2</option>
+            {subjects.map((s) => (
+              <option key={s.subjectID} value={String(s.subjectID)}>
+                {s.title}
+              </option>
+            ))}
           </select>
-          {errors.subject && (
-            <p className="text-red-500 text-sm mt-1">{errors.subject.message}</p>
+          {errors.subjectID && (
+            <p className="text-red-500 text-sm mt-1">{errors.subjectID.message}</p>
+          )}
+          {loadingSubjects && (
+            <p className="text-gray-500 text-sm mt-1">Loading subjects...</p>
           )}
         </div>
 
@@ -230,7 +260,7 @@ export default function UploadForm({ onSuccess, onCancel }: UploadFormProps) {
             render={({ field }) => (
               <input
                 type="file"
-                accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/png,image/jpeg"
                 name={field.name}
                 id="upload-file"
                 ref={field.ref}
