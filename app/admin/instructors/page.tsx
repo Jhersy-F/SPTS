@@ -46,7 +46,7 @@ export default function AdminInstructorsPage() {
 
   return (
     <div className="max-w-5xl mx-auto p-6 space-y-6">
-      <h1 className="text-2xl font-bold">Manage Instructors</h1>
+      <h1 className="text-2xl font-bold"> Instructors</h1>
       {error && <div className="bg-red-100 text-red-700 px-3 py-2 rounded">{error}</div>}
 
       <div className="border rounded overflow-x-auto">

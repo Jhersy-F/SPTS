@@ -22,7 +22,9 @@ const Upload = () => {
   const [showForm, setShowForm] = useState(false);
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [instructors, setInstructors] = useState<Array<{id:number; firstName:string; lastName:string; username:string}>>([]);
+  const [subjects, setSubjects] = useState<Array<{subjectID: number; title: string}>>([]);
   const [loadingInstructors, setLoadingInstructors] = useState<boolean>(false);
+  const [loadingSubjects, setLoadingSubjects] = useState<boolean>(false);
   const [query, setQuery] = useState<string>("");
 
   const loadUploads = useCallback(async () => {
@@ -45,19 +47,31 @@ const Upload = () => {
     loadUploads();
   }, [loadUploads]);
 
-  // Load instructors for edit dropdowns
+  // Load instructors and subjects for dropdowns
   useEffect(() => {
-    const loadInstructors = async () => {
+    const loadData = async () => {
+      // Load instructors
       try {
         setLoadingInstructors(true);
-        const res = await fetch('/api/instructors');
-        const data = await res.json();
-        if (res.ok) setInstructors(data.instructors || []);
+        const instructorsRes = await fetch('/api/instructors');
+        const instructorsData = await instructorsRes.json();
+        if (instructorsRes.ok) setInstructors(instructorsData.instructors || []);
       } finally {
         setLoadingInstructors(false);
       }
+
+      // Load subjects
+      try {
+        setLoadingSubjects(true);
+        const subjectsRes = await fetch('/api/subjects');
+        const subjectsData = await subjectsRes.json();
+        if (subjectsRes.ok) setSubjects(subjectsData.subjects || []);
+      } finally {
+        setLoadingSubjects(false);
+      }
     };
-    loadInstructors();
+    
+    loadData();
   }, []);
 
   const onDelete = async (id: number) => {
@@ -244,11 +258,15 @@ const Upload = () => {
                     <select
                       className="border px-2 py-1 rounded w-full"
                       value={editForm.subject}
-                      onChange={(e)=>setEditForm((f)=>({...f, subject: e.target.value}))}
+                      onChange={(e) => setEditForm(f => ({ ...f, subject: e.target.value }))}
+                      disabled={loadingSubjects}
                     >
                       <option value="">Select a subject</option>
-                      <option value="subject1">Subject 1</option>
-                      <option value="subject2">Subject 2</option>
+                      {subjects.map((subject) => (
+                        <option key={subject.subjectID} value={subject.title}>
+                          {subject.title}
+                        </option>
+                      ))}
                     </select>
                   ) : (
                     u.subject || '-'
