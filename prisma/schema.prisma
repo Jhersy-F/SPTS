@@ -38,12 +38,24 @@ model Instructor {
   firstName String   @db.VarChar(255)
   lastName  String   @db.VarChar(255)
   uploads   Upload[]
+  subjects  InstructorSubject[]
 }
 
 model Subject {
   subjectID Int    @id @default(autoincrement())
   title     String @db.VarChar(255)
   uploads   Upload[]
+  instructors InstructorSubject[]
+}
+
+model InstructorSubject {
+  instructor   Instructor @relation(fields: [instructorId], references: [id])
+  instructorId Int
+  subject      Subject    @relation(fields: [subjectId], references: [subjectID])
+  subjectId    Int
+  assignedAt  DateTime  @default(now())
+
+  @@id([instructorId, subjectId])
 }
 
 model Admin {

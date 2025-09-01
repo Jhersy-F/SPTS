@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 const nav = [
   { href: '/instructor/dashboard', label: 'Home' },
   { href: '/instructor/students', label: 'Students' },
+  { href: '/instructor/subjects', label: 'My Subjects' },
   { href: '/instructor/uploads', label: 'Uploads' },
   { href: '/instructor/profile', label: 'Profile' },
 ];

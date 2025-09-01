@@ -6,6 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { signIn } from 'next-auth/react';
+import { PasswordInput } from '@/components/ui/password-input';
 
 const loginSchema = z.object({
   username: z.string().min(1, 'Username is required'),
@@ -63,10 +64,9 @@ export default function AdminLogin() {
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Password</label>
-          <input
-            type="password"
+          <PasswordInput
             {...register('password')}
-            className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full"
             disabled={loading}
           />
           {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>}

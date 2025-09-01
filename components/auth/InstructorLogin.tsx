@@ -8,6 +8,7 @@ import * as z from 'zod';
 import { useSession } from 'next-auth/react';
 import { User } from '@/types';
 import { signIn } from 'next-auth/react';
+import { PasswordInput } from '@/components/ui/password-input';
 
 type LoginFormData = z.infer<typeof loginSchema>;
 
@@ -87,10 +88,9 @@ export default function InstructorLogin() {
 
         <div>
           <label className="block text-sm font-medium mb-1">Password</label>
-          <input
-            type="password"
+          <PasswordInput
             {...register('password')}
-            className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full"
             disabled={loading}
           />
           {errors.password && (

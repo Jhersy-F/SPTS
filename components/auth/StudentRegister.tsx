@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { studentSchema } from '@/lib/validations';
 import  ROUTES  from '@/constants/routes';
 import * as z from 'zod';
-
+import { PasswordInput } from '@/components/ui/password-input';
 
 
 export default function StudentRegister() {
@@ -105,10 +105,9 @@ export default function StudentRegister() {
 
         <div>
           <label className="block text-sm font-medium mb-1">Password</label>
-          <input
-            type="password"
+          <PasswordInput
             {...register('password')}
-            className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full"
           />
           {errors.password && (
             <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>
@@ -117,10 +116,9 @@ export default function StudentRegister() {
 
         <div>
           <label className="block text-sm font-medium mb-1">Confirm Password</label>
-          <input
-            type="password"
+          <PasswordInput
             {...register('confirmPassword')}
-            className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full"
           />
           {errors.confirmPassword && (
             <p className="text-red-500 text-sm mt-1">{errors.confirmPassword.message}</p>
