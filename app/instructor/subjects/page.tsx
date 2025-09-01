@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 
 interface Subject {
-  subjectID: number;  // Changed to match API response
+  subjectId: number;  // Changed to match API response
   title: string;
 }
 
@@ -25,7 +25,7 @@ export default function InstructorSubjectsPage() {
         // Map the API response to match our interface
         const formattedSubjects = Array.isArray(subjects) 
           ? subjects.map(subj => ({
-              subjectID: subj.subjectID,
+              subjectId: subj.subjectID,
               title: subj.title
             }))
           : [];
@@ -63,7 +63,7 @@ export default function InstructorSubjectsPage() {
 
       const data = await res.json();
       setSubjects(Array.isArray(data) ? data : []);
-      
+      console.log(data);
       // Set the first subject as selected by default if none selected
       if (Array.isArray(data) && data.length > 0 && !selectedSubjectId) {
         setSelectedSubjectId(String(data[0].subjectID));
@@ -86,7 +86,7 @@ export default function InstructorSubjectsPage() {
       
       // Find the selected subject to get its title
       const selectedSubject = allSubjects.find(subj => {
-        const match = subj?.subjectID?.toString() === selectedSubjectId?.toString();
+        const match = subj?.subjectId?.toString() === selectedSubjectId?.toString();
         console.log(`Checking subject:`, subj, 'Match:', match);
         return match;
       });
@@ -99,20 +99,23 @@ export default function InstructorSubjectsPage() {
       const response = await fetch('/api/instructor/subjects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: selectedSubject.title }),
+        body: JSON.stringify({ 
+          subjectId: selectedSubject.subjectId
+        }),
         credentials: 'include',
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Failed to add subject');
+        
+        throw new Error(errorData.message || response.statusText);
       }
       
       setSelectedSubjectId('');
       await fetchMySubjects();
     } catch (error) {
       console.error('Error adding subject:', error);
-      setError(error instanceof Error ? error.message : 'Failed to add subject');
+      setError(error instanceof Error ? error.message : 'Catch Failed to add subject');
     }
   };
 
@@ -151,14 +154,7 @@ export default function InstructorSubjectsPage() {
     );
   }
 
-  if (error) {
-    return (
-      <div className="p-4 bg-white min-h-screen text-gray-900">
-        <h1 className="text-3xl font-bold mb-6 text-center text-gray-800">My Subjects</h1>
-        <div className="text-center text-red-600">Error: {error}</div>
-      </div>
-    );
-  }
+
 
   const filteredSubjects = subjects.filter((subject) => {
     const q = query.trim().toLowerCase();
@@ -167,12 +163,29 @@ export default function InstructorSubjectsPage() {
   });
 
   return (
+    
+    
+  
     <div className="p-4 bg-white min-h-screen text-gray-900">
       <h1 className="text-3xl font-bold mb-6 text-center text-gray-800">My Subjects</h1>
       
       <div className="w-4/5 mx-auto mb-6">
         <div className="bg-white rounded-lg shadow-md p-6">
           <h2 className="text-xl font-semibold mb-4">Add New Subject</h2>
+          {error && (
+          <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-red-700">{error}</p>
+              </div>
+            </div>
+          </div>
+        )}
           <div className="flex gap-2">
             <select
               value={selectedSubjectId}
@@ -181,11 +194,11 @@ export default function InstructorSubjectsPage() {
             >
               <option value="">Select a subject</option>
               {allSubjects
-                .filter(subject => !subjects.some(s => s.subjectID === subject.subjectID))
+                .filter(subject => !subjects.some(s => s.subjectId === subject.subjectId))
                 .map((subject) => (
                   <option 
-                    key={`subject-${subject.subjectID}`} 
-                    value={String(subject.subjectID)}
+                    key={`subject-${subject.subjectId}`} 
+                    value={String(subject.subjectId)}
                   >
                     {subject.title}
                   </option>
@@ -227,13 +240,13 @@ export default function InstructorSubjectsPage() {
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {filteredSubjects.map((subject) => (
-              <tr  key={`subject-${subject.subjectID}`}  className="hover:bg-gray-50">
+              <tr  key={`subject-${subject.subjectId}`}  className="hover:bg-gray-50">
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">{subject.title}</div>
+                  <div className="text-sm font-medium text-gray-900">{subject.title +" "+ subject.subjectId}</div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <button
-                    onClick={() => handleDeleteSubject(subject.subjectID)}
+                    onClick={() => handleDeleteSubject(subject.subjectId)}
                     className="text-red-600 hover:text-red-900"
                   >
                     Delete
@@ -250,5 +263,7 @@ export default function InstructorSubjectsPage() {
         )}
       </div>
     </div>
+    
+        
   );
 }

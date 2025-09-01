@@ -44,32 +44,22 @@ export async function POST(req: Request) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
-    const { title } = await req.json();
-    if (!title) {
-      return new NextResponse('Title is required', { status: 400 });
+    const { subjectId } = await req.json();
+    if (!subjectId) {
+      return new NextResponse('Subject is required', { statusText:"Title is required",status: 403 });
     }
 
-    // Find or create the subject
-    let subject = await prisma.subject.findFirst({
-      where: { title },
-    });
-
-    if (!subject) {
-      subject = await prisma.subject.create({
-        data: { title },
-      });
-    }
 
     // Check if the instructor already has this subject
     const existingLink = await prisma.instructorSubject.findFirst({
       where: {
         instructor: { id: parseInt(session.user.id) },
-        subjectId: subject.subjectID,
+        subjectId: subjectId,
       },
     });
 
     if (existingLink) {
-      return new NextResponse('Subject already assigned to instructor', { status: 400 });
+      return new NextResponse('Subject already assigned to instructor', {statusText:"Subject already assigned to instructor", status: 400 });
     }
 
     // Link the subject to the instructor
@@ -79,14 +69,14 @@ export async function POST(req: Request) {
         subjects: {
           create: {
             subject: {
-              connect: { subjectID: subject.subjectID },
+              connect: { subjectID: subjectId },
             },
           },
         },
       },
     });
 
-    return NextResponse.json({ subjectId: subject.subjectID, title: subject.title });
+    return NextResponse.json({ subjectId: subjectId});
   } catch (error) {
     console.error('Error adding subject:', error);
     return new NextResponse('Internal Server Error', { status: 500 });
