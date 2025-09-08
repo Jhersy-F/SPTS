@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 
 interface Subject {
-  subjectId: number;  // Changed to match API response
+  subjectId: number;
   title: string;
 }
 
@@ -242,9 +243,15 @@ export default function InstructorSubjectsPage() {
             {filteredSubjects.map((subject) => (
               <tr  key={`subject-${subject.subjectId}`}  className="hover:bg-gray-50">
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">{subject.title +" "+ subject.subjectId}</div>
+                  <div className="text-sm font-medium text-gray-900">{subject.title}</div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-4">
+                  <Link 
+                    href={`/instructor/subjects/${subject.subjectId}/students`}
+                    className="text-blue-600 hover:text-blue-900 hover:underline"
+                  >
+                    View Students
+                  </Link>
                   <button
                     onClick={() => handleDeleteSubject(subject.subjectId)}
                     className="text-red-600 hover:text-red-900"

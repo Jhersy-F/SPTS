@@ -1,6 +1,9 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { Dialog } from '@headlessui/react';
+import { X } from 'lucide-react';
+import Image from 'next/image';
 
 interface Upload {
   id: string | number;
@@ -25,6 +28,18 @@ export default function InstructorUploadsPage() {
   const [query, setQuery] = useState<string>("");
   const [subjectFilter, setSubjectFilter] = useState<string>("");
   const [typeFilter, setTypeFilter] = useState<string>("");
+  const [selectedFile, setSelectedFile] = useState<{ url: string; type: string } | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
+
+  const openModal = (url: string, type: string) => {
+    setSelectedFile({ url, type });
+    setIsOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsOpen(false);
+    setSelectedFile(null);
+  };
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -174,9 +189,25 @@ export default function InstructorUploadsPage() {
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{r.title}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{r.type}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{r.subject}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-600">
+                <td className="px-6 py-4 whitespace-nowrap text-sm">
                   {r.link ? (
-                    <a href={r.link} target="_blank" rel="noopener noreferrer" className="underline">View</a>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => openModal(r.link as string, r.type?.toLowerCase() || '')}
+                        className="text-blue-600 hover:text-blue-800 underline"
+                      >
+                        View
+                      </button>
+                      <a 
+                        href={r.link} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="text-blue-600 hover:text-blue-800 underline"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        Download
+                      </a>
+                    </div>
                   ) : (
                     '—'
                   )}
@@ -186,6 +217,64 @@ export default function InstructorUploadsPage() {
           </tbody>
         </table>
       </div>
+
+      {/* View File Modal */}
+      <Dialog
+        open={isOpen}
+        onClose={closeModal}
+        className="fixed inset-0 z-50 overflow-y-auto"
+      >
+        <div className="flex items-center justify-center min-h-screen p-4">
+          <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
+          <div className="relative bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            <div className="flex justify-between items-center p-4 border-b">
+              <Dialog.Title className="text-lg font-medium">
+                {selectedFile?.type || 'File'} Preview
+              </Dialog.Title>
+              <button
+                onClick={closeModal}
+                className="text-gray-500 hover:text-gray-700"
+                aria-label="Close"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            <div className="p-4 max-h-[calc(90vh-100px)] overflow-auto">
+              {selectedFile?.type.includes('pdf') ? (
+                <iframe
+                  src={`${selectedFile.url}#view=fitH`}
+                  className="w-full h-[70vh] border-0"
+                  title="PDF Viewer"
+                />
+              ) : selectedFile?.type.includes('image') ? (
+                <div className="flex justify-center">
+                  <div className="relative w-full h-[70vh]">
+                    <Image
+                      src={selectedFile.url}
+                      alt="Preview"
+                      fill
+                      style={{ objectFit: 'contain' }}
+                      unoptimized={!selectedFile.url.startsWith('/')}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-64">
+                  <p className="mb-4">Preview not available for this file type.</p>
+                  <a 
+                    href={selectedFile?.url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                  >
+                    Download File
+                  </a>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </Dialog>
     </div>
   );
 }

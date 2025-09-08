@@ -56,7 +56,6 @@ export default function AdminStudentsPage() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Student #</th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">First Name</th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Last Name</th>
@@ -66,7 +65,6 @@ export default function AdminStudentsPage() {
             <tbody className="bg-white divide-y divide-gray-200">
               {students.map((s) => (
                 <tr key={s.id}>
-                  <td className="px-4 py-2">{s.id}</td>
                   <td className="px-4 py-2">{s.studentNumber}</td>
                   <td className="px-4 py-2">{s.firstName}</td>
                   <td className="px-4 py-2">{s.lastName}</td>
