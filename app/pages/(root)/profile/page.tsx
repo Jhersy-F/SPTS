@@ -9,7 +9,9 @@ import { Label } from '@/components/ui/label';
 
 interface UpdateData {
   firstName: string;
+  middleName?: string;
   lastName: string;
+  extensionName?: string;
   studentNumber: string;
   currentPassword?: string;
   newPassword?: string;
@@ -23,7 +25,9 @@ export default function ProfilePage() {
   
   const [formData, setFormData] = useState({
     firstName: '',
+    middleName: '',
     lastName: '',
+    extensionName: '',
     studentNumber: '',
     currentPassword: '',
     newPassword: '',
@@ -47,7 +51,9 @@ export default function ProfilePage() {
       setFormData(prev => ({
         ...prev,
         firstName: session.user.firstName || '',
+        middleName: session.user.middleName || '',
         lastName: session.user.lastName || '',
+        extensionName: session.user.extensionName || '',
         studentNumber: session.user.studentNumber || ''
       }));
     }
@@ -77,7 +83,9 @@ export default function ProfilePage() {
     try {
       const updateData: UpdateData = {
         firstName: formData.firstName,
+        middleName: formData.middleName,
         lastName: formData.lastName,
+        extensionName: formData.extensionName,
         studentNumber: formData.studentNumber
       };
 
@@ -111,7 +119,15 @@ export default function ProfilePage() {
           user: {
             ...session?.user,
             firstName: formData.firstName,
-            name: `${formData.firstName} ${formData.lastName}`,
+            middleName: formData.middleName,
+            lastName: formData.lastName,
+            extensionName: formData.extensionName,
+            name: [
+              formData.firstName,
+              formData.middleName,
+              formData.lastName,
+              formData.extensionName
+            ].filter(Boolean).join(' '),
             studentNumber: formData.studentNumber
           }
         });
@@ -181,6 +197,20 @@ export default function ProfilePage() {
                   />
                 </div>
                 <div className="space-y-2">
+                  <Label htmlFor="middleName">Middle Name (Optional)</Label>
+                  <Input
+                    id="middleName"
+                    name="middleName"
+                    type="text"
+                    value={formData.middleName}
+                    onChange={handleInputChange}
+                    placeholder="Enter your middle name"
+                  />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
                   <Label htmlFor="lastName">Last Name</Label>
                   <Input
                     id="lastName"
@@ -190,6 +220,17 @@ export default function ProfilePage() {
                     onChange={handleInputChange}
                     required
                     placeholder="Enter your last name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="extensionName">Name Extension (e.g., Jr., Sr., III) (Optional)</Label>
+                  <Input
+                    id="extensionName"
+                    name="extensionName"
+                    type="text"
+                    value={formData.extensionName}
+                    onChange={handleInputChange}
+                    placeholder="e.g., Jr., Sr., III"
                   />
                 </div>
               </div>

@@ -13,6 +13,8 @@ declare module 'next-auth' {
     id: string;
     lastName: string | null;
     firstName: string | null;
+    middleName?: string | null;
+    extensionName?: string | null;
     studentNumber?: string | null;
     role: 'student' | 'instructor' | 'admin';
   }
@@ -25,7 +27,9 @@ declare module 'next-auth' {
     id: string;
     role: 'student' | 'instructor' | 'admin';
     firstName: string | null;
+    middleName?: string | null;
     lastName: string | null;
+    extensionName?: string | null;
     studentNumber?: string | null;
   }
 }
@@ -59,9 +63,11 @@ export const authOptions: AuthOptions = {
 
         return {
           id: student.id.toString(), 
-          name: `${student.firstName} ${student.lastName}`,
+          name: `${student.firstName} ${student.middleName ? student.middleName + ' ' : ''}${student.lastName}${student.extensionName ? ' ' + student.extensionName : ''}`,
           firstName: student.firstName,
+          middleName: student.middleName || null,
           lastName: student.lastName,
+          extensionName: student.extensionName || null,
           studentNumber: student.studentNumber,
           role: 'student'
         };

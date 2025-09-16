@@ -52,7 +52,8 @@ export default function StudentUploadsPage() {
   const types = useMemo(() => {
     const typeSet = new Set([
       ...allUploads.map(upload => upload.type).filter(Boolean),
-      'exam',
+      'activity',
+      'exam', 
       'quiz'
     ]);
     return Array.from(typeSet).map(type => ({

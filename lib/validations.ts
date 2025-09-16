@@ -39,7 +39,9 @@ export const SignUpSchema = z.object({
 export const studentSchema = z.object({
   studentNumber: z.string().min(1, 'Student number is required'),
   firstName: z.string().min(1, 'First name is required'),
+  middleName: z.string().optional(),
   lastName: z.string().min(1, 'Last name is required'),
+  extensionName: z.string().optional(),
   password: z.string()
   .min(6, { message: "Password must be at least 6 characters long." })
   .max(100, { message: "Password cannot exceed 100 characters." })

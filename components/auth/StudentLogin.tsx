@@ -40,7 +40,7 @@ export default function StudentLogin() {
     }
 
     setSuccess(true);
-    router.push('/dashboard');
+    router.push('/pages/dashboard');
   }
 
   if (success) {

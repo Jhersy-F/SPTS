@@ -1,22 +1,22 @@
 export const sidebarLinks = [
   {
   
-    route: "/dashboard",
+    route: "/pages/dashboard",
     label: "Home",
   },
   {
  
-    route: "/monitoring",
+    route: "/pages/monitoring",
     label: "Monitoring of Submission",
   },
   {
     
-    route: "/upload",
+    route: "/pages/upload",
     label: "Upload",
   },
   {
     
-    route: "/profile",
+    route: "/pages/profile",
     label: "Profile",
   },
 

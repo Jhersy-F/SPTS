@@ -17,7 +17,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { firstName, lastName, studentNumber, currentPassword, newPassword } = body;
+    const { firstName, middleName, lastName, extensionName, studentNumber, currentPassword, newPassword } = body;
 
     // Validate required fields
     if (!firstName || !lastName || !studentNumber) {
@@ -49,12 +49,16 @@ export async function PUT(request: NextRequest) {
     // Prepare update data
     const updateData: {
       firstName: string;
+      middleName?: string;
       lastName: string;
+      extensionName?: string;
       studentNumber: string;
       password?: string;
     } = {
       firstName,
+      middleName: middleName || null,
       lastName,
+      extensionName: extensionName || null,
       studentNumber
     };
 
@@ -121,9 +125,12 @@ export async function GET() {
       where: { id: studentId },
       select: {
         id: true,
+        studentNumber: true,
         firstName: true,
+        middleName: true,
         lastName: true,
-        studentNumber: true
+        extensionName: true,
+        email: true
       }
     });
 

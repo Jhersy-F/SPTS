@@ -33,17 +33,20 @@ export default function StudentRegister() {
         body: JSON.stringify({
           ...data,
           password: data.password,
+          middleName: data.middleName || null,
+          extensionName: data.extensionName || null,
         }),
       });
 
       if (!response.ok) {
-        throw new Error('Registration failed');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Registration failed');
       }
 
       setSuccess(true);
       router.push(ROUTES.SIGN_IN);
     } catch (err) {
-      setError('Registration failed. Please try again.');
+      setError(err instanceof Error ? err.message : 'Registration failed. Please try again.');
     }
   }
 
@@ -100,6 +103,31 @@ export default function StudentRegister() {
           />
           {errors.lastName && (
             <p className="text-red-500 text-sm mt-1">{errors.lastName.message}</p>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">Middle Name (Optional)</label>
+          <input
+            type="text"
+            {...register('middleName')}
+            className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          {errors.middleName && (
+            <p className="text-red-500 text-sm mt-1">{errors.middleName.message}</p>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">Name Extension (e.g., Jr., Sr., III) (Optional)</label>
+          <input
+            type="text"
+            {...register('extensionName')}
+            className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="e.g., Jr., Sr., III"
+          />
+          {errors.extensionName && (
+            <p className="text-red-500 text-sm mt-1">{errors.extensionName.message}</p>
           )}
         </div>
 

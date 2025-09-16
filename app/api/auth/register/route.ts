@@ -5,7 +5,7 @@ import bcrypt from 'bcryptjs';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { studentNumber, firstName, lastName, password } = body;
+    const { studentNumber, firstName, middleName, lastName, extensionName, password } = body;
 
     // Check if student already exists
     const existingStudent = await prisma.student.findUnique({
@@ -27,7 +27,9 @@ export async function POST(request: Request) {
       data: {
         studentNumber,
         firstName,
+        middleName: middleName || null,
         lastName,
+        extensionName: extensionName || null,
         password: hashedPassword,
       },
     });
@@ -38,7 +40,9 @@ export async function POST(request: Request) {
         id: student.id,
         studentNumber: student.studentNumber,
         firstName: student.firstName,
+        middleName: student.middleName,
         lastName: student.lastName,
+        extensionName: student.extensionName,
       },
     });
   } catch (error) {
