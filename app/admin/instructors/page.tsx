@@ -16,7 +16,9 @@ export default function AdminInstructorsPage() {
     id: number;
     username: string;
     firstName: string;
+    middleName?: string;
     lastName: string;
+    extensionName?: string;
   }
 
   const [instructors, setInstructors] = useState<Instructor[]>([]);
@@ -39,15 +41,14 @@ export default function AdminInstructorsPage() {
     }
     
     const lowerTerm = term.toLowerCase();
-    const filtered = instructorsList.filter(instructor => 
-      instructor.username.toLowerCase().includes(lowerTerm) || 
-      instructor.firstName.toLowerCase().includes(lowerTerm) || 
-      instructor.lastName.toLowerCase().includes(lowerTerm)
-    );
+    const filtered = instructorsList.filter(instructor => {
+      const fullName = `${instructor.lastName}, ${instructor.firstName} ${instructor.middleName || ''} ${instructor.extensionName || ''}`.toLowerCase();
+      return fullName.includes(lowerTerm) || instructor.username.toLowerCase().includes(lowerTerm);
+    });
     setFilteredInstructors(filtered);
   }, []);
 
-  // Load instructors only once on component mount
+  // Load and sort instructors
   const loadInstructors = useCallback(async () => {
     try {
       setLoadingData(true);
@@ -55,16 +56,30 @@ export default function AdminInstructorsPage() {
       const res = await fetch('/api/instructors');
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || 'Failed to load instructors');
-      const instructorsData = data.instructors || [];
-      setInstructors(instructorsData);
-      filterInstructors(instructorsData, searchTerm);
+      
+      // Sort instructors by lastName, firstName, middleName, extensionName
+      const sortedInstructors = [...(data.instructors || [])].sort((a, b) => {
+        const compareLast = a.lastName.localeCompare(b.lastName);
+        if (compareLast !== 0) return compareLast;
+        
+        const compareFirst = a.firstName.localeCompare(b.firstName);
+        if (compareFirst !== 0) return compareFirst;
+        
+        const compareMiddle = (a.middleName || '').localeCompare(b.middleName || '');
+        if (compareMiddle !== 0) return compareMiddle;
+        
+        return (a.extensionName || '').localeCompare(b.extensionName || '');
+      });
+      
+      setInstructors(sortedInstructors);
+      filterInstructors(sortedInstructors, searchTerm);
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : 'Failed to load instructors';
       setError(message);
     } finally {
       setLoadingData(false);
     }
-  }, [filterInstructors]);
+  }, [filterInstructors, searchTerm]);
 
   // Handle search input changes
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -113,8 +128,7 @@ export default function AdminInstructorsPage() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Username</th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">First Name</th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Last Name</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
               </tr>
             </thead>
@@ -122,8 +136,9 @@ export default function AdminInstructorsPage() {
               {filteredInstructors.map((i) => (
                 <tr key={i.id}>
                   <td className="px-4 py-2">{i.username}</td>
-                  <td className="px-4 py-2">{i.firstName}</td>
-                  <td className="px-4 py-2">{i.lastName}</td>
+                  <td className="px-4 py-2">
+                    {`${i.lastName}, ${i.firstName}${i.middleName ? ' ' + i.middleName : ''}${i.extensionName ? ' ' + i.extensionName : ''}`}
+                  </td>
                   <td className="px-4 py-2">
                     <ChangePasswordDialog 
                       userId={i.id} 

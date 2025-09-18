@@ -11,12 +11,12 @@ import { AuthOptions } from 'next-auth';
 declare module 'next-auth' {
   interface User {
     id: string;
-    lastName: string | null;
-    firstName: string | null;
-    middleName?: string | null;
-    extensionName?: string | null;
-    studentNumber?: string | null;
     role: 'student' | 'instructor' | 'admin';
+    firstName: string | null;
+    middleName: string | null;
+    lastName: string | null;
+    extensionName: string | null;
+    studentNumber: string | null;
   }
 
   interface Session {
@@ -27,10 +27,10 @@ declare module 'next-auth' {
     id: string;
     role: 'student' | 'instructor' | 'admin';
     firstName: string | null;
-    middleName?: string | null;
+    middleName: string | null;
     lastName: string | null;
-    extensionName?: string | null;
-    studentNumber?: string | null;
+    extensionName: string | null;
+    studentNumber: string | null;
   }
 }
 
@@ -62,14 +62,21 @@ export const authOptions: AuthOptions = {
         }
 
         return {
-          id: student.id.toString(), 
-          name: `${student.firstName} ${student.middleName ? student.middleName + ' ' : ''}${student.lastName}${student.extensionName ? ' ' + student.extensionName : ''}`,
-          firstName: student.firstName,
+          id: student.id.toString(),
+          name: [
+            student.firstName,
+            student.middleName,
+            student.lastName,
+            student.extensionName
+          ].filter(Boolean).join(' '),
+          firstName: student.firstName || null,
           middleName: student.middleName || null,
-          lastName: student.lastName,
+          lastName: student.lastName || null,
           extensionName: student.extensionName || null,
-          studentNumber: student.studentNumber,
-          role: 'student'
+          studentNumber: student.studentNumber || null,
+          role: 'student',
+          email: null,
+          emailVerified: null
         };
       }
     }),
@@ -99,11 +106,20 @@ export const authOptions: AuthOptions = {
         }
 
         return {
-          id: instructor.id.toString(), 
-          name: `${instructor.firstName} ${instructor.lastName}`,
-          firstName: instructor.firstName,
-          lastName: instructor.lastName,
+          id: instructor.id.toString(),
+          name: [
+            instructor.firstName,
+            instructor.middleName,
+            instructor.lastName,
+            instructor.extensionName
+          ].filter(Boolean).join(' '),
+          firstName: instructor.firstName || null,
+          middleName: instructor.middleName || null,
+          lastName: instructor.lastName || null,
+          extensionName: instructor.extensionName || null,
+          studentNumber: null,
           role: 'instructor',
+          email: null,
           emailVerified: null
         };
       }
@@ -131,15 +147,19 @@ export const authOptions: AuthOptions = {
        // const isPasswordValid = await bcrypt.compare(credentials?.password || '', admin.password);
        // if (!isPasswordValid) {
         //  throw new Error('Invalid password');
-        //}
+       //}
 
         return {
           id: admin.adminID.toString(),
           name: admin.username,
           firstName: null,
+          middleName: null,
           lastName: null,
+          extensionName: null,
+          studentNumber: null,
           role: 'admin',
-          emailVerified: null,
+          email: null,
+          emailVerified: null
         };
       },
     })
@@ -157,27 +177,32 @@ export const authOptions: AuthOptions = {
         token.id = user.id;
         token.role = user.role as 'student' | 'instructor' | 'admin';
         token.firstName = user.firstName;
+        token.middleName = user.middleName;
         token.lastName = user.lastName;
+        token.extensionName = user.extensionName;
         token.studentNumber = user.studentNumber;
       }
       return token;
     },
-    async session({ session, token }: { session: Session; token: JWT; user: AdapterUser }) {
+    async session({ session, token }): Promise<Session> {
       if (session.user) {
+        // Create name from available name parts
+        const name = [
+          token.firstName,
+          token.middleName,
+          token.lastName,
+          token.extensionName
+        ].filter(Boolean).join(' ');
+
+        // Update session with user data
         session.user.id = token.id as string;
         session.user.role = token.role as 'student' | 'instructor' | 'admin';
         session.user.firstName = token.firstName as string | null;
+        session.user.middleName = token.middleName as string | null;
         session.user.lastName = token.lastName as string | null;
-        session.user.studentNumber = token.studentNumber as string | null | undefined;
-        // Remove the default NextAuth properties that we don't need
-        const userWithoutDefaults = {
-          id: session.user.id,
-          role: session.user.role,
-          firstName: session.user.firstName,
-          lastName: session.user.lastName,
-          studentNumber: session.user.studentNumber
-        };
-        session.user = userWithoutDefaults;
+        session.user.extensionName = token.extensionName as string | null;
+        session.user.studentNumber = token.studentNumber as string | null;
+        session.user.name = name || session.user.name || null;
       }
       return session;
     }

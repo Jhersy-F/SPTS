@@ -27,11 +27,10 @@ export async function PATCH(
 
     const id = parseId(params.id);
     const body = await request.json();
-    const { title, description, instructor, subject } = body as { 
-      title?: string; 
+    const { description, instructorId, subjectId } = body as { 
       description?: string; 
-      instructor?: string; 
-      subject?: string; 
+      instructorId?: string | number; 
+      subjectId?: string | number;
     };
 
     // Ensure ownership
@@ -40,14 +39,37 @@ export async function PATCH(
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
 
+    const updateData: {
+      description?: string;
+      instructor?: { connect: { id: number } };
+      subject?: { connect: { subjectID: number } };
+    } = {};
+
+    if (description !== undefined) {
+      updateData.description = description;
+    }
+
+    if (instructorId !== undefined) {
+      const instructorIdNum = typeof instructorId === 'string' ? parseInt(instructorId) : instructorId;
+      if (!isNaN(instructorIdNum)) {
+        updateData.instructor = { connect: { id: instructorIdNum } };
+      } else {
+        return NextResponse.json({ error: 'Invalid instructor ID' }, { status: 400 });
+      }
+    }
+    
+    if (subjectId !== undefined) {
+      const subjectIdNum = typeof subjectId === 'string' ? parseInt(subjectId) : subjectId;
+      if (!isNaN(subjectIdNum)) {
+        updateData.subject = { connect: { subjectID: subjectIdNum } };
+      } else {
+        return NextResponse.json({ error: 'Invalid subject ID' }, { status: 400 });
+      }
+    }
+
     const updated = await prisma.upload.update({
       where: { id },
-      data: {
-        ...(title !== undefined ? { title } : {}),
-        ...(description !== undefined ? { description } : {}),
-        ...(instructor !== undefined ? { instructor } : {}),
-        ...(subject !== undefined ? { subject } : {}),
-      },
+      data: updateData,
     });
 
     return NextResponse.json({ upload: updated });

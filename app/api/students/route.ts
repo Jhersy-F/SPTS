@@ -15,10 +15,17 @@ export async function GET() {
         id: true,
         studentNumber: true,
         firstName: true,
+        middleName: true,
         lastName: true,
+        extensionName: true,
         _count: { select: { uploads: true } },
       },
-      orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
+      orderBy: [
+        { lastName: 'asc' },
+        { firstName: 'asc' },
+        { middleName: 'asc' },
+        { extensionName: 'asc' }
+      ],
     });
 
     return NextResponse.json({ students });

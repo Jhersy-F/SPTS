@@ -30,7 +30,9 @@ export default function InstructorRegister() {
         body: JSON.stringify({
           username: data.username,
           firstName: data.firstName,
+          middleName: data.middleName,
           lastName: data.lastName,
+          extensionName: data.extensionName,
           password: data.password,
           confirmPassword: data.confirmPassword,
         }),
@@ -107,6 +109,32 @@ export default function InstructorRegister() {
           />
           {errors.lastName && (
             <p className="text-red-500 text-sm mt-1">{errors.lastName.message}</p>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">Middle Name (Optional)</label>
+          <input
+            type="text"
+            {...register('middleName')}
+            className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            disabled={isSubmitting}
+          />
+          {errors.middleName && (
+            <p className="text-red-500 text-sm mt-1">{errors.middleName.message}</p>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">Name Extension (e.g. Jr, Sr, III) (Optional)</label>
+          <input
+            type="text"
+            {...register('extensionName')}
+            className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            disabled={isSubmitting}
+          />
+          {errors.extensionName && (
+            <p className="text-red-500 text-sm mt-1">{errors.extensionName.message}</p>
           )}
         </div>
 

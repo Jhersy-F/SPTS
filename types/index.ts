@@ -9,8 +9,25 @@ export type User = {
 export type Student = {
   id: number;
   firstName: string;
+  middleName?: string;
   lastName: string;
+  extensionName?: string;
   studentNumber: string;
+  uploads: Array<{
+    id: number;
+    title: string;
+    description: string;
+    link: string;
+  }>;
+};
+
+export type Instructor = {
+  id: number;
+  username: string;
+  firstName: string;
+  middleName?: string;
+  lastName: string;
+  extensionName?: string;
   uploads: Array<{
     id: number;
     title: string;

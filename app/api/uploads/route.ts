@@ -23,7 +23,7 @@ export async function GET() {
 
     const uploadsRaw = await prisma.upload.findMany({
       where: { studentId: Number(session.user.id) },
-      orderBy: { id: 'desc' },
+      orderBy: { description: 'asc' }, // Sort by description in ascending order
       include: {
         instructor: { select: { firstName: true, lastName: true } },
         subject: { select: { title: true, subjectID: true } },
@@ -53,10 +53,17 @@ export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
     
-    if (!session) {
+    if (!session?.user) {
       return NextResponse.json(
         { error: 'Not authorized' },
         { status: 401 }
+      );
+    }
+    
+    if (session.user.role !== 'student') {
+      return NextResponse.json(
+        { error: 'Only students are allowed to upload files' },
+        { status: 403 }
       );
     }
 
@@ -135,10 +142,10 @@ export async function POST(request: Request) {
       );
     }
 
-    // Create upload record in database
+    // Create upload record in database with optional title
     const upload = await prisma.upload.create({
       data: {
-        title,
+        title: title || 'Untitled', // Provide a default title if none provided
         description,
         type: type.toLowerCase(),
         link: `/uploads/${uniqueFileName}`,

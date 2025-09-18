@@ -18,7 +18,7 @@ const Upload = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>("");
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [editForm, setEditForm] = useState<{ title: string; description: string; instructor: string; subject: string }>({ title: "", description: "", instructor: "", subject: "" });
+  const [editForm, setEditForm] = useState<{ description: string; instructor: string; subject: string }>({ description: "", instructor: "", subject: "" });
   const [showForm, setShowForm] = useState(false);
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [instructors, setInstructors] = useState<Array<{id:number; firstName:string; lastName:string; username:string}>>([]);
@@ -89,7 +89,7 @@ const Upload = () => {
 
   const startEdit = (u: UploadItem) => {
     setEditingId(u.id);
-    setEditForm({ title: u.title, description: u.description, instructor: u.instructor || "", subject: u.subject || "" });
+    setEditForm({ description: u.description, instructor: u.instructor || "", subject: u.subject || "" });
   };
 
   const cancelEdit = () => {
@@ -101,7 +101,6 @@ const Upload = () => {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        title: editForm.title,
         description: editForm.description,
         instructor: editForm.instructor,
         subject: editForm.subject,
@@ -123,7 +122,7 @@ const Upload = () => {
     const queryLc = q.trim().toLowerCase();
     if (queryLc) {
       list = list.filter(upload => (
-        `${upload.title} ${upload.description} ${upload.instructor ?? ''} ${upload.subject ?? ''} ${upload.type}`
+        `${upload.description} ${upload.instructor ?? ''} ${upload.subject ?? ''} ${upload.type}`
           .toLowerCase()
           .includes(queryLc)
       ));
@@ -202,9 +201,8 @@ const Upload = () => {
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-100">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Title</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Description</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Instructor</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Title/Description</th>
+             <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Instructor</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Subject</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Type</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">File</th>
@@ -220,13 +218,7 @@ const Upload = () => {
             )}
             {filteredUploads.map((u) => (
               <tr key={u.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800">
-                  {editingId === u.id ? (
-                    <input className="border px-2 py-1 rounded w-full" value={editForm.title} onChange={(e)=>setEditForm((f)=>({...f, title: e.target.value}))} />
-                  ) : (
-                    u.title
-                  )}
-                </td>
+              
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                   {editingId === u.id ? (
                     <input className="border px-2 py-1 rounded w-full" value={editForm.description} onChange={(e)=>setEditForm((f)=>({...f, description: e.target.value}))} />

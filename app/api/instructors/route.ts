@@ -16,12 +16,16 @@ export async function GET() {
       select: {
         id: true,
         firstName: true,
+        middleName: true,
         lastName: true,
+        extensionName: true,
         username: true,
       },
       orderBy: [
+        { lastName: 'asc' },
         { firstName: 'asc' },
-        { lastName: 'asc' }
+        { middleName: 'asc' },
+        { extensionName: 'asc' }
       ]
     });
 
@@ -40,7 +44,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
     }
 
-    const { username, firstName, lastName, password } = parsed.data;
+    const { username, firstName, middleName, lastName, extensionName, password } = parsed.data;
 
     // Check if username already exists
     const existing = await prisma.instructor.findUnique({ where: { username } });
@@ -53,10 +57,19 @@ export async function POST(request: Request) {
       data: {
         username,
         firstName,
+        middleName,
         lastName,
+        extensionName,
         password: hashed,
       },
-      select: { id: true, username: true, firstName: true, lastName: true },
+      select: { 
+        id: true, 
+        username: true, 
+        firstName: true, 
+        middleName: true,
+        lastName: true, 
+        extensionName: true 
+      },
     });
 
     return NextResponse.json({ instructor: created }, { status: 201 });

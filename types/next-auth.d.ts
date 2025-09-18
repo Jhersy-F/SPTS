@@ -5,22 +5,35 @@ declare module 'next-auth' {
   interface Session {
     user: {
       id: string;
-      role: string;
-      firstName?: string;
-      middleName?: string;
-      lastName?: string;
-      extensionName?: string;
-      studentNumber?: string;
+      role: 'student' | 'instructor' | 'admin';
+      firstName: string | null;
+      middleName: string | null;
+      lastName: string | null;
+      extensionName: string | null;
+      studentNumber: string | null;
+      name?: string | null;
+      email?: string | null;
+      image?: string | null;
     } & DefaultSession['user'];
   }
   
   interface User {
     id: string;
-    role: string;
-    firstName?: string;
-    middleName?: string;
-    lastName?: string;
-    extensionName?: string;
-    studentNumber?: string;
+    role: 'student' | 'instructor' | 'admin';
+    firstName: string | null;
+    middleName: string | null;
+    lastName: string | null;
+    extensionName: string | null;
+    studentNumber: string | null;
+  }
+
+  interface JWT {
+    id: string;
+    role: 'student' | 'instructor' | 'admin';
+    firstName: string | null;
+    middleName: string | null;
+    lastName: string | null;
+    extensionName: string | null;
+    studentNumber: string | null;
   }
 }

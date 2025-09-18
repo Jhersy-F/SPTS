@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
@@ -12,11 +12,51 @@ import { ChangePasswordDialog } from '@/components/admin/ChangePasswordDialog';
 export default function AdminStudentsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [students, setStudents] = useState<Array<{ id: number; studentNumber: string; firstName: string; lastName: string; _count?: { uploads: number } }>>([]);
+  const [students, setStudents] = useState<Array<{ 
+    id: number; 
+    studentNumber: string; 
+    firstName: string; 
+    middleName?: string; 
+    lastName: string; 
+    extensionName?: string;
+    _count?: { uploads: number } 
+  }>>([]);
   const [filteredStudents, setFilteredStudents] = useState<typeof students>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loadingData, setLoadingData] = useState(true);
   const [error, setError] = useState('');
+
+  // Load and sort students
+  const load = useCallback(async () => {
+    try {
+      setLoadingData(true);
+      setError('');
+      const res = await fetch('/api/students');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'Failed to load students');
+      
+      // Sort students by lastName, firstName, middleName, extensionName
+      const sortedStudents = [...(data.students || [])].sort((a, b) => {
+        const compareLast = a.lastName.localeCompare(b.lastName);
+        if (compareLast !== 0) return compareLast;
+        
+        const compareFirst = a.firstName.localeCompare(b.firstName);
+        if (compareFirst !== 0) return compareFirst;
+        
+        const compareMiddle = (a.middleName || '').localeCompare(b.middleName || '');
+        if (compareMiddle !== 0) return compareMiddle;
+        
+        return (a.extensionName || '').localeCompare(b.extensionName || '');
+      });
+      
+      setStudents(sortedStudents);
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : 'Failed to load students';
+      setError(errorMessage);
+    } finally {
+      setLoadingData(false);
+    }
+  }, []);
 
   // Filter students based on search term
   useEffect(() => {
@@ -26,11 +66,10 @@ export default function AdminStudentsPage() {
     }
     
     const term = searchTerm.toLowerCase();
-    const filtered = students.filter(student => 
-      student.firstName.toLowerCase().includes(term) || 
-      student.lastName.toLowerCase().includes(term) ||
-      student.studentNumber.toLowerCase().includes(term)
-    );
+    const filtered = students.filter(student => {
+      const fullName = `${student.lastName}, ${student.firstName} ${student.middleName || ''} ${student.extensionName || ''}`.toLowerCase();
+      return fullName.includes(term) || student.studentNumber.toLowerCase().includes(term);
+    });
     setFilteredStudents(filtered);
   }, [searchTerm, students]);
 
@@ -44,25 +83,7 @@ export default function AdminStudentsPage() {
   useEffect(() => {
     if (status !== 'authenticated' || !session?.user || session.user.role !== 'admin') return;
     load();
-  }, [status, session]);
-
-  async function load() {
-    try {
-      setLoadingData(true);
-      setError('');
-      const res = await fetch('/api/students');
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || 'Failed to load students');
-      const studentsData = data.students || [];
-      setStudents(studentsData);
-      setFilteredStudents(studentsData);
-    } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : 'Failed to load students';
-      setError(message);
-    } finally {
-      setLoadingData(false);
-    }
-  }
+  }, [status, session, load]);
 
   if (status === 'loading' || loadingData) {
     return <div className="p-6">Loading...</div>;
@@ -93,8 +114,7 @@ export default function AdminStudentsPage() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Student #</th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">First Name</th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Last Name</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Uploads</th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
               </tr>
@@ -103,8 +123,9 @@ export default function AdminStudentsPage() {
               {filteredStudents.map((s) => (
                 <tr key={s.id}>
                   <td className="px-4 py-2">{s.studentNumber}</td>
-                  <td className="px-4 py-2">{s.firstName}</td>
-                  <td className="px-4 py-2">{s.lastName}</td>
+                  <td className="px-4 py-2">
+                    {`${s.lastName}, ${s.firstName}${s.middleName ? ' ' + s.middleName : ''}${s.extensionName ? ' ' + s.extensionName : ''}`}
+                  </td>
                   <td className="px-4 py-2">{s._count?.uploads ?? '-'}</td>
                   <td className="px-4 py-2">
                     <ChangePasswordDialog 

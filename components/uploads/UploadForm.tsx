@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 
 const uploadSchema = z.object({
-  title: z.string().min(1, 'Title is required'),
+  title: z.string().optional(),
   description: z.string().min(1, 'Description is required'),
   type: z.enum(['quiz', 'activity', 'exam'], {
     required_error: 'Type is required',
@@ -120,7 +120,9 @@ export default function UploadForm({ onSuccess, onCancel }: UploadFormProps) {
       }
 
       const formData = new FormData();
+      if (data.title) {
       formData.append('title', data.title);
+    }
       formData.append('description', data.description);
       formData.append('type', data.type);
       formData.append('instructorID', data.instructorID);
@@ -170,20 +172,9 @@ export default function UploadForm({ onSuccess, onCancel }: UploadFormProps) {
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium mb-1">Title</label>
+          <label className="block text-sm font-medium mb-1">Title/Description</label>
           <input
             type="text"
-            {...register('title')}
-            className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          {errors.title && (
-            <p className="text-red-500 text-sm mt-1">{errors.title.message}</p>
-          )}
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-1">Description</label>
-          <textarea
             {...register('description')}
             className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
@@ -191,6 +182,8 @@ export default function UploadForm({ onSuccess, onCancel }: UploadFormProps) {
             <p className="text-red-500 text-sm mt-1">{errors.description.message}</p>
           )}
         </div>
+
+      
 
         <div>
           <label className="block text-sm font-medium mb-1">Type</label>
