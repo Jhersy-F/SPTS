@@ -6,6 +6,7 @@ import { useParams, useSearchParams, useRouter } from 'next/navigation';
 interface Upload {
   id: number;
   title: string;
+  description:string;
   link: string;
   uploadedAt: string;
   type: string;
@@ -134,7 +135,7 @@ export default function StudentUploadsPage() {
     }
   }, [studentId, subjectId]);
 
-  const handleDownload = (link: string, title: string) => {
+  const handleDownload = (link: string, description: string) => {
     // In a real app, you would handle the file download here
     // For now, we'll just open the file in a new tab
     window.open(link, '_blank');
@@ -290,7 +291,7 @@ export default function StudentUploadsPage() {
                 <tr key={`upload-${upload.id}`} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">
-                      {upload.title}
+                      {upload.description}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">

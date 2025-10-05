@@ -8,6 +8,8 @@ interface Student {
   id: number;
   firstName: string;
   lastName: string;
+  middleName:string;
+  extensionName:string;
   email: string;
   uploads: Array<{
     id: number;
@@ -148,7 +150,7 @@ export default function SubjectStudentsPage() {
                 <tr key={`student-${student.id}`} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">
-                      {student.firstName} {student.lastName}
+                    {`${student.lastName}, ${student.firstName}${student.middleName ? ' ' + student.middleName : ''}${student.extensionName ? ' ' + student.extensionName : ''}`}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">

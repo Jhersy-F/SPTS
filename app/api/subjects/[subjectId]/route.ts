@@ -5,8 +5,9 @@ import { authOptions } from '@/lib/auth';
 
 export async function GET(
   request: Request,
-  { params }: { params: { subjectId: string } }
+  context:{ params:Promise<{subjectId:string }> }
 ) {
+  const subjectIDRaw = (await context.params).subjectId
   try {
     const session = await getServerSession(authOptions);
     
@@ -17,7 +18,7 @@ export async function GET(
       );
     }
 
-    const subjectId = parseInt(params.subjectId);
+    const subjectId = parseInt(subjectIDRaw);
     if (isNaN(subjectId)) {
       return NextResponse.json(
         { error: 'Invalid subject ID' },
