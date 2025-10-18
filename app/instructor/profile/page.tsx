@@ -109,6 +109,7 @@ export default function InstructorProfilePage() {
       if (response.ok) {
         setMessage({ type: 'success', text: 'Profile updated successfully!' });
         // Update session with new basic info available in session model
+       
         await update({
           ...session,
           user: {

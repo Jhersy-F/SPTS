@@ -6,15 +6,53 @@ import Link from 'next/link';
 interface Subject {
   subjectId: number;
   title: string;
+  semester: string;
+  year: number;
+}
+
+interface Section {
+  id: number;
+  name: string;
+  _count: {
+    students: number;
+  };
 }
 
 export default function InstructorSubjectsPage() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [allSubjects, setAllSubjects] = useState<Subject[]>([]);
+  const [allSubjects, setAllSubjects] = useState<Array<{ subjectId: number; title: string }>>([]);
+  const [sections, setSections] = useState<Record<number, Section[]>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>('');
+  const [newSectionName, setNewSectionName] = useState('');
+  const [isAddingSection, setIsAddingSection] = useState(false);
+  const [activeSubjectId, setActiveSubjectId] = useState<number | null>(null);
+
+  const fetchSections = useCallback(async (subjectId: number) => {
+    try {
+      const res = await fetch(`/api/instructor/subjects/${subjectId}/sections`);
+      
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error('Failed to fetch sections:', errorText);
+        return;
+      }
+      
+      try {
+        const sectionsData = await res.json();
+        setSections((prev: Record<number, Section[]>) => ({
+          ...prev,
+          [subjectId]: sectionsData
+        }));
+      } catch (jsonError) {
+        console.error('Error parsing sections JSON:', jsonError);
+      }
+    } catch (error) {
+      console.error('Error fetching sections:', error);
+    }
+  }, []);
 
   const fetchAllSubjects = useCallback(async () => {
     try {
@@ -63,65 +101,103 @@ export default function InstructorSubjectsPage() {
       }
 
       const data = await res.json();
-      setSubjects(Array.isArray(data) ? data : []);
-      console.log(data);
-      // Set the first subject as selected by default if none selected
-      if (Array.isArray(data) && data.length > 0 && !selectedSubjectId) {
-        setSelectedSubjectId(String(data[0].subjectID));
+      const formattedSubjects = Array.isArray(data) ? data.map(subj => ({
+        subjectId: subj.subjectId || subj.subjectID,
+        title: subj.title,
+        semester: subj.semester || '1st Semester',
+        year: subj.year || new Date().getFullYear()
+      })) : [];
+      
+      setSubjects(formattedSubjects);
+      
+      // Set the first subject as active by default if none selected
+      if (formattedSubjects.length > 0 && !activeSubjectId) {
+        setActiveSubjectId(formattedSubjects[0].subjectId);
+        fetchSections(formattedSubjects[0].subjectId);
       }
-    } catch (e) {
-      console.error('Fetch subjects error:', e);
-      setError(e instanceof Error ? e.message : 'An error occurred while fetching subjects');
+    } catch (error) {
+      console.error('Error fetching subjects:', error);
+      setError(error instanceof Error ? error.message : 'Failed to fetch subjects');
     } finally {
       setLoading(false);
     }
-  },[selectedSubjectId]);
+  }, [activeSubjectId, fetchSections]);
 
-  const handleAddSubject = async () => {
-    if (!selectedSubjectId) return;
-    
+  const handleAddSubject = useCallback(async (subjectId: number) => {
     try {
-      // Debug logs
-      console.log('Selected Subject ID:', selectedSubjectId);
-      console.log('All Subjects:', allSubjects);
-      
-      // Find the selected subject to get its title
-      const selectedSubject = allSubjects.find(subj => {
-        const match = subj?.subjectId?.toString() === selectedSubjectId?.toString();
-        console.log(`Checking subject:`, subj, 'Match:', match);
-        return match;
-      });
-      
-      if (!selectedSubject) {
-        console.error('Subject not found in:', allSubjects);
-        throw new Error('Selected subject not found. Please try again.');
-      }
-
       const response = await fetch('/api/instructor/subjects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          subjectId: selectedSubject.subjectId
-        }),
+        body: JSON.stringify({ subjectId }),
         credentials: 'include',
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        
-        throw new Error(errorData.message || response.statusText);
+        throw new Error(errorData.message || 'Failed to add subject');
       }
       
       setSelectedSubjectId('');
       await fetchMySubjects();
     } catch (error) {
       console.error('Error adding subject:', error);
-      setError(error instanceof Error ? error.message : 'Catch Failed to add subject');
+      setError(error instanceof Error ? error.message : 'Failed to add subject');
+    }
+  }, [fetchMySubjects]);
+
+
+  const handleAddSection = async (subjectId: number) => {
+    if (!newSectionName.trim()) return;
+    
+    try {
+      const response = await fetch(`/api/instructor/subjects/${subjectId}/sections`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newSectionName }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to add section');
+      }
+      
+      setNewSectionName('');
+      setIsAddingSection(false);
+      await fetchSections(subjectId);
+    } catch (error) {
+      console.error('Error adding section:', error);
+      setError(error instanceof Error ? error.message : 'Failed to add section');
+    }
+  };
+
+  const handleDeleteSection = async (sectionId: number, subjectId: number) => {
+    if (!confirm('Are you sure you want to delete this section? This action cannot be undone.')) return;
+    
+    try {
+      const response = await fetch(`/api/instructor/sections/${sectionId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete section');
+      }
+      
+      await fetchSections(subjectId);
+    } catch (error) {
+      console.error('Error deleting section:', error);
+      setError('Failed to delete section');
+    }
+  };
+
+  const handleSubjectClick = (subjectId: number) => {
+    setActiveSubjectId(activeSubjectId === subjectId ? null : subjectId);
+    if (activeSubjectId !== subjectId) {
+      fetchSections(subjectId);
     }
   };
 
   const handleDeleteSubject = async (subjectId: number) => {
-    if (!confirm('Are you sure you want to delete this subject?')) return;
+    if (!confirm('Are you sure you want to delete this subject? This will also delete all sections and student enrollments for this subject.')) return;
     
     try {
       const response = await fetch(`/api/instructor/subjects/${subjectId}`, {
@@ -131,6 +207,10 @@ export default function InstructorSubjectsPage() {
       if (!response.ok) throw new Error('Failed to delete subject');
       
       await fetchMySubjects();
+      // Reset active subject if it was deleted
+      if (activeSubjectId === subjectId) {
+        setActiveSubjectId(null);
+      }
     } catch (error) {
       console.error('Error deleting subject:', error);
       setError('Failed to delete subject');
@@ -160,20 +240,49 @@ export default function InstructorSubjectsPage() {
   const filteredSubjects = subjects.filter((subject) => {
     const q = query.trim().toLowerCase();
     if (!q) return true;
-    return subject.title.toLowerCase().includes(q);
+    return (
+      subject.title.toLowerCase().includes(q) ||
+      subject.semester.toLowerCase().includes(q) ||
+      subject.year.toString().includes(q)
+    );
   });
 
+  const currentSections = activeSubjectId ? sections[activeSubjectId] || [] : [];
+
   return (
-    
-    
-  
-    <div className="p-4 bg-white min-h-screen text-gray-900">
-      <h1 className="text-3xl font-bold mb-6 text-center text-gray-800">My Subjects</h1>
-      
-      <div className="w-4/5 mx-auto mb-6">
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-xl font-semibold mb-4">Add New Subject</h2>
-          {error && (
+    <div className="p-4 bg-gray-50 min-h-screen">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">My Subjects</h1>
+          
+          {/* Add Subject Button */}
+          <div className="flex items-center space-x-4">
+            <select
+              value={selectedSubjectId}
+              onChange={(e) => setSelectedSubjectId(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Select a subject to add</option>
+              {allSubjects
+                .filter(subject => !subjects.some(s => s.subjectId === subject.subjectId))
+                .map((subject) => (
+                  <option key={`add-subject-${subject.subjectId}`} value={String(subject.subjectId)}>
+                    {subject.title}
+                  </option>
+                ))}
+            </select>
+            <button
+              onClick={() => selectedSubjectId && handleAddSubject(parseInt(selectedSubjectId))}
+              disabled={!selectedSubjectId}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+            >
+              Add Subject
+            </button>
+          </div>
+        </div>
+
+        {/* Error Message */}
+        {error && (
           <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500">
             <div className="flex">
               <div className="flex-shrink-0">
@@ -187,90 +296,163 @@ export default function InstructorSubjectsPage() {
             </div>
           </div>
         )}
-          <div className="flex gap-2">
-            <select
-              value={selectedSubjectId}
-              onChange={(e) => setSelectedSubjectId(e.target.value)}
-              className="w-[500px] flex-initial px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Select a subject</option>
-              {allSubjects
-                .filter(subject => !subjects.some(s => s.subjectId === subject.subjectId))
-                .map((subject) => (
-                  <option 
-                    key={`subject-${subject.subjectId}`} 
-                    value={String(subject.subjectId)}
-                  >
-                    {subject.title}
-                  </option>
-                ))}
-            </select>
-            <button
-              onClick={handleAddSubject}
-              disabled={!selectedSubjectId}
-              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex-initial w-64 "
-            >
-              Add Subject
-            </button>
+
+        {/* Search Bar */}
+        <div className="mb-6">
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search subjects by name, semester, or year..."
+              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+            />
           </div>
         </div>
-      </div>
 
-      <div className="w-4/5 mx-auto mb-4">
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search subjects..."
-          className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          aria-label="Search subjects"
-        />
-      </div>
+        {/* Subjects List */}
+        <div className="bg-white shadow overflow-hidden sm:rounded-md">
+          {filteredSubjects.length === 0 ? (
+            <div className="text-center py-12 text-gray-500">
+              {query ? 'No subjects match your search.' : 'No subjects found. Add a subject to get started.'}
+            </div>
+          ) : (
+            <ul className="divide-y divide-gray-200">
+              {filteredSubjects.map((subject) => (
+                <li key={`subject-${subject.subjectId}`} className="hover:bg-gray-50">
+                  <div 
+                    className="px-4 py-4 sm:px-6 cursor-pointer"
+                    onClick={() => handleSubjectClick(subject.subjectId)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <div className="text-lg font-medium text-blue-600 truncate">
+                          {subject.title}
+                        </div>
+                        <div className="ml-2 flex-shrink-0 flex">
+                          <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                            {subject.semester} {subject.year}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="ml-2 flex-shrink-0 flex">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteSubject(subject.subjectId);
+                          }}
+                          className="text-red-600 hover:text-red-900 mr-4"
+                        >
+                          <span className="sr-only">Delete</span>
+                          <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                          </svg>
+                        </button>
+                        <svg
+                          className={`h-5 w-5 text-gray-400 transform transition-transform ${activeSubjectId === subject.subjectId ? 'rotate-180' : ''}`}
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
+                          <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
 
-      <div className="overflow-x-auto bg-white rounded-lg shadow-md w-4/5 mx-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-100">
-            <tr>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider rounded-tl-lg">
-                Subject Name
-              </th>
-              <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-600 uppercase tracking-wider rounded-tr-lg">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {filteredSubjects.map((subject) => (
-              <tr  key={`subject-${subject.subjectId}`}  className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">{subject.title}</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-4">
-                  <Link 
-                    href={`/instructor/subjects/${subject.subjectId}/students`}
-                    className="text-blue-600 hover:text-blue-900 hover:underline"
-                  >
-                    View Students
-                  </Link>
-                  <button
-                    onClick={() => handleDeleteSubject(subject.subjectId)}
-                    className="text-red-600 hover:text-red-900"
-                  >
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {filteredSubjects.length === 0 && (
-          <div className="text-center py-8 text-gray-500">
-            {query ? 'No subjects match your search.' : 'No subjects found.'}
-          </div>
-        )}
+                  {/* Sections Panel */}
+                  {activeSubjectId === subject.subjectId && (
+                    <div className="border-t border-gray-200 bg-gray-50 px-4 py-4 sm:px-6">
+                      <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-lg font-medium text-gray-900">Sections</h3>
+                        <button
+                          onClick={() => setIsAddingSection(!isAddingSection)}
+                          className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                        >
+                          {isAddingSection ? 'Cancel' : 'Add Section'}
+                        </button>
+                      </div>
+
+                      {/* Add Section Form */}
+                      {isAddingSection && (
+                        <div className="mb-4 p-4 bg-white rounded-md shadow-sm border border-gray-200">
+                          <div className="flex items-end space-x-2">
+                            <div className="flex-1">
+                              <label htmlFor="sectionName" className="block text-sm font-medium text-gray-700 mb-1">
+                                Section Name
+                              </label>
+                              <input
+                                type="text"
+                                id="sectionName"
+                                value={newSectionName}
+                                onChange={(e) => setNewSectionName(e.target.value)}
+                                className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                                placeholder="e.g., Section A"
+                              />
+                            </div>
+                            <button
+                              onClick={() => handleAddSection(subject.subjectId)}
+                              disabled={!newSectionName.trim()}
+                              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                            >
+                              Save Section
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Sections List */}
+                      <div className="overflow-hidden bg-white shadow sm:rounded-md">
+                        <ul className="divide-y divide-gray-200">
+                          {currentSections.length > 0 ? (
+                            currentSections.map((section) => (
+                              <li key={`section-${section.id}`}>
+                                <div className="flex items-center justify-between px-4 py-4 sm:px-6">
+                                  <div className="flex items-center">
+                                    <div className="text-sm font-medium text-gray-900">{section.name}</div>
+                                    <div className="ml-2 flex-shrink-0 flex">
+                                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+                                        {section._count.students} {section._count.students === 1 ? 'student' : 'students'}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <div className="flex space-x-4">
+                                    <Link
+                                      href={`/instructor/sections/${section.id}/students`}
+                                      className="text-blue-600 hover:text-blue-900"
+                                    >
+                                      View Students
+                                    </Link>
+                                    <button
+                                      onClick={() => handleDeleteSection(section.id, subject.subjectId)}
+                                      className="text-red-600 hover:text-red-900"
+                                    >
+                                      Delete
+                                    </button>
+                                  </div>
+                                </div>
+                              </li>
+                            ))
+                          ) : (
+                            <li className="px-4 py-4 text-center text-gray-500">
+                              No sections yet. Add a section to get started.
+                            </li>
+                          )}
+                        </ul>
+                      </div>
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </div>
     </div>
-    
-        
   );
 }

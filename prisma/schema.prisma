@@ -9,14 +9,15 @@ generator client {
 }
 
 model Student {
-  id            Int      @id @default(autoincrement())
-  studentNumber String   @unique @db.VarChar(255)
-  firstName     String   @db.VarChar(255)
-  middleName    String?  @db.VarChar(255)
-  lastName      String   @db.VarChar(255)
-  extensionName String?  @db.VarChar(10)
-  password      String   @db.VarChar(255)
+  id            Int             @id @default(autoincrement())
+  studentNumber String          @unique @db.VarChar(255)
+  firstName     String          @db.VarChar(255)
+  middleName    String?         @db.VarChar(255)
+  lastName      String          @db.VarChar(255)
+  extensionName String?         @db.VarChar(10)
+  password      String          @db.VarChar(255)
   uploads       Upload[]
+  sections      StudentSection[]
 }
 
 model Upload {
@@ -46,10 +47,11 @@ model Instructor {
 }
 
 model Subject {
-  subjectID Int    @id @default(autoincrement())
-  title     String @db.VarChar(255)
-  uploads   Upload[]
+  subjectID   Int                @id @default(autoincrement())
+  title       String             @db.VarChar(255)
+  uploads     Upload[]
   instructors InstructorSubject[]
+  
 }
 
 model InstructorSubject {
@@ -57,9 +59,33 @@ model InstructorSubject {
   instructorId Int
   subject      Subject    @relation(fields: [subjectId], references: [subjectID])
   subjectId    Int
-  assignedAt  DateTime  @default(now())
+  semester     String     @db.VarChar(50)
+  year         Int
+  assignedAt   DateTime   @default(now())
+  sections     Section[]
 
   @@id([instructorId, subjectId])
+}
+
+model Section {
+  id                Int                @id @default(autoincrement())
+  name              String             @db.VarChar(100)
+  instructorSubject InstructorSubject  @relation(fields: [instructorSubjectInstructorId, instructorSubjectSubjectId], references: [instructorId, subjectId])
+  instructorSubjectInstructorId Int
+  instructorSubjectSubjectId    Int
+  students          StudentSection[]
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  @@unique([instructorSubjectInstructorId, instructorSubjectSubjectId, name])
+}
+
+model StudentSection {
+  section   Section @relation(fields: [sectionId], references: [id])
+  sectionId Int
+  student   Student @relation(fields: [studentId], references: [id])
+  studentId Int
+  
+  @@id([sectionId, studentId])
 }
 
 model Admin {
