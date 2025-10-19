@@ -28,6 +28,8 @@ export async function GET() {
     const subjects = instructor.subjects.map((item) => ({
       subjectId: item.subject.subjectID,
       title: item.subject.title,
+      semester: item.semester,
+      year: item.year,
     }));
 
     return NextResponse.json(subjects);

@@ -5,18 +5,19 @@ import { prisma } from '@/lib/prisma';
 
 export async function GET(
   req: Request,
-  { params }: { params: { subjectId: string } }
+  context: { params: { subjectId: string } }
 ) {
+  const { subjectId } = await Promise.resolve(context.params);
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
-    const sections = await prisma.Section.findMany({
+    const sections = await prisma.section.findMany({
       where: {
         instructorSubjectInstructorId: parseInt(session.user.id),
-        instructorSubjectSubjectId: parseInt(params.subjectId),
+        instructorSubjectSubjectId: parseInt(subjectId),
       },
       include: {
         _count: {
@@ -42,8 +43,9 @@ export async function GET(
 
 export async function POST(
   req: Request,
-  { params }: { params: { subjectId: string } }
+  context: { params: { subjectId: string } }
 ) {
+  const { subjectId } = await Promise.resolve(context.params);
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
@@ -56,11 +58,11 @@ export async function POST(
     }
 
     // Check if section already exists for this instructor and subject
-    const existingSection = await prisma.Section.findFirst({
+    const existingSection = await prisma.section.findFirst({
       where: {
         name,
         instructorSubjectInstructorId: parseInt(session.user.id),
-        instructorSubjectSubjectId: parseInt(params.subjectId),
+        instructorSubjectSubjectId: parseInt(subjectId),
       },
     });
 
@@ -68,11 +70,11 @@ export async function POST(
       return new NextResponse('Section with this name already exists', { status: 400 });
     }
 
-    const section = await prisma.Section.create({
+const section = await prisma.section.create({
       data: {
         name,
         instructorSubjectInstructorId: parseInt(session.user.id),
-        instructorSubjectSubjectId: parseInt(params.subjectId),
+        instructorSubjectSubjectId: parseInt(subjectId),
       },
     });
 

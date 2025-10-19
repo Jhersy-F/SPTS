@@ -28,6 +28,12 @@ export default function InstructorSubjectsPage() {
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>('');
   const [newSectionName, setNewSectionName] = useState('');
   const [isAddingSection, setIsAddingSection] = useState(false);
+  const [isEditingSubject, setIsEditingSubject] = useState<number | null>(null);
+  const [editSubjectData, setEditSubjectData] = useState<{
+    title: string;
+    semester: string;
+    year: number;
+  }>({ title: '', semester: '1st Semester', year: new Date().getFullYear() });
   const [activeSubjectId, setActiveSubjectId] = useState<number | null>(null);
 
   const fetchSections = useCallback(async (subjectId: number) => {
@@ -196,6 +202,48 @@ export default function InstructorSubjectsPage() {
     }
   };
 
+  const handleEditSubject = (subject: Subject) => {
+    setIsEditingSubject(subject.subjectId);
+    setEditSubjectData({
+      title: subject.title,
+      semester: subject.semester,
+      year: subject.year
+    });
+  };
+
+  const handleUpdateSubject = async (subjectId: number) => {
+    try {
+      const response = await fetch(`/api/instructor/subjects/${subjectId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editSubjectData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update subject');
+      }
+      
+      // Update the local state immediately for better UX
+      setSubjects(prevSubjects => 
+        prevSubjects.map(subject => 
+          subject.subjectId === subjectId 
+            ? { 
+                ...subject, 
+                semester: editSubjectData.semester, 
+                year: editSubjectData.year 
+              } 
+            : subject
+        )
+      );
+      
+      setIsEditingSubject(null);
+    } catch (error) {
+      console.error('Error updating subject:', error);
+      setError(error instanceof Error ? error.message : 'Failed to update subject');
+    }
+  };
+
   const handleDeleteSubject = async (subjectId: number) => {
     if (!confirm('Are you sure you want to delete this subject? This will also delete all sections and student enrollments for this subject.')) return;
     
@@ -211,10 +259,15 @@ export default function InstructorSubjectsPage() {
       if (activeSubjectId === subjectId) {
         setActiveSubjectId(null);
       }
+      setIsEditingSubject(null);
     } catch (error) {
       console.error('Error deleting subject:', error);
       setError('Failed to delete subject');
     }
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditingSubject(null);
   };
 
   useEffect(() => {
@@ -331,28 +384,104 @@ export default function InstructorSubjectsPage() {
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center">
-                        <div className="text-lg font-medium text-blue-600 truncate">
-                          {subject.title}
-                        </div>
-                        <div className="ml-2 flex-shrink-0 flex">
-                          <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                            {subject.semester} {subject.year}
-                          </span>
-                        </div>
+                        {isEditingSubject === subject.subjectId ? (
+                          <div className="flex flex-col space-y-3 w-full">
+                            <input
+                              type="text"
+                              value={editSubjectData.title}
+                              readOnly
+                              className="block w-full px-4 py-2.5 border border-gray-300 bg-gray-100 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-base rounded-sm cursor-not-allowed"
+                              style={{ minWidth: '400px' }}
+                            />
+                            <div className="flex space-x-3 items-center">
+                              <select
+                                value={editSubjectData.semester}
+                                onChange={(e) => setEditSubjectData({...editSubjectData, semester: e.target.value})}
+                                className="block px-4 py-2.5 border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-base rounded-sm"
+                                style={{ minWidth: '180px' }}
+                              >
+                                <option value="1st Semester">1st Semester</option>
+                                <option value="2nd Semester">2nd Semester</option>
+                                <option value="Summer">Summer</option>
+                              </select>
+                              <input
+                                type="number"
+                                value={editSubjectData.year}
+                                onChange={(e) => setEditSubjectData({...editSubjectData, year: parseInt(e.target.value)})}
+                                className="block px-4 py-2.5 border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-base rounded-sm"
+                                style={{ width: '120px' }}
+                              />
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="text-lg font-medium text-blue-600 truncate">
+                              {subject.title}
+                            </div>
+                            <div className="ml-2 flex-shrink-0 flex">
+                              <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                {subject.semester} {subject.year}
+                              </span>
+                            </div>
+                          </>
+                        )}
                       </div>
                       <div className="ml-2 flex-shrink-0 flex">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteSubject(subject.subjectId);
-                          }}
-                          className="text-red-600 hover:text-red-900 mr-4"
-                        >
-                          <span className="sr-only">Delete</span>
-                          <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                          </svg>
-                        </button>
+                        {isEditingSubject === subject.subjectId ? (
+                          <>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleUpdateSubject(subject.subjectId);
+                              }}
+                              className="text-green-600 hover:text-green-900 mr-2"
+                              title="Save changes"
+                            >
+                              <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleCancelEdit();
+                              }}
+                              className="text-gray-600 hover:text-gray-900 mr-2"
+                              title="Cancel"
+                            >
+                              <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                              </svg>
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditSubject(subject);
+                              }}
+                              className="text-blue-600 hover:text-blue-900 mr-2"
+                              title="Edit subject"
+                            >
+                              <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteSubject(subject.subjectId);
+                              }}
+                              className="text-red-600 hover:text-red-900 mr-2"
+                              title="Delete subject"
+                            >
+                              <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                              </svg>
+                            </button>
+                          </>
+                        )}
                         <svg
                           className={`h-5 w-5 text-gray-400 transform transition-transform ${activeSubjectId === subject.subjectId ? 'rotate-180' : ''}`}
                           xmlns="http://www.w3.org/2000/svg"
