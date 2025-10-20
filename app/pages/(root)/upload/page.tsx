@@ -1,303 +1,140 @@
 "use client"
-import React, { useCallback, useEffect, useState } from "react";
-import UploadForm from "@/components/uploads/UploadForm";
 
-type UploadItem = {
-  id: number;
+import React, { useEffect, useState } from "react";
+import Link from "next/link";
+import { useSession } from "next-auth/react";
+
+
+interface Subject {
+  subjectId: string;
   title: string;
-  description: string;
-  type: string;
-  link: string;
-  instructor?: string;
-  subject?: string;
-};
+  semester: string;
+  year: number;
+}
 
-const Upload = () => {
-  const [uploads, setUploads] = useState<UploadItem[]>([]);
-  const [filteredUploads, setFilteredUploads] = useState<UploadItem[]>([]);
-  const [loading, setLoading] = useState(false);
+export default function UploadPage() {
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [editForm, setEditForm] = useState<{ description: string; instructor: string; subject: string }>({ description: "", instructor: "", subject: "" });
-  const [showForm, setShowForm] = useState(false);
-  const [typeFilter, setTypeFilter] = useState<string>("all");
-  const [instructors, setInstructors] = useState<Array<{id:number; firstName:string; lastName:string; username:string}>>([]);
-  const [subjects, setSubjects] = useState<Array<{subjectID: number; title: string}>>([]);
-  const [loadingInstructors, setLoadingInstructors] = useState<boolean>(false);
-  const [loadingSubjects, setLoadingSubjects] = useState<boolean>(false);
-  const [query, setQuery] = useState<string>("");
-
-  const loadUploads = useCallback(async () => {
-    try {
-      setLoading(true);
-      const res = await fetch("/api/uploads", { cache: "no-store" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || "Failed to load uploads");
-      const list = data.uploads || [];
-      setUploads(list);
-      applyAllFilters(list, typeFilter, query);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load uploads");
-    } finally {
-      setLoading(false);
-    }
-  }, [typeFilter, query]);
 
   useEffect(() => {
-    loadUploads();
-  }, [loadUploads]);
-
-  // Load instructors and subjects for dropdowns
-  useEffect(() => {
-    const loadData = async () => {
-      // Load instructors
+    const fetchSubjects = async () => {
       try {
-        setLoadingInstructors(true);
-        const instructorsRes = await fetch('/api/instructors');
-        const instructorsData = await instructorsRes.json();
-        if (instructorsRes.ok) setInstructors(instructorsData.instructors || []);
+        const response = await fetch('/api/student/subjects');
+        if (!response.ok) {
+          throw new Error('Failed to fetch subjects');
+        }
+        const data = await response.json();
+        setSubjects(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load subjects');
       } finally {
-        setLoadingInstructors(false);
-      }
-
-      // Load subjects
-      try {
-        setLoadingSubjects(true);
-        const subjectsRes = await fetch('/api/subjects');
-        const subjectsData = await subjectsRes.json();
-        if (subjectsRes.ok) setSubjects(subjectsData.subjects || []);
-      } finally {
-        setLoadingSubjects(false);
+        setLoading(false);
       }
     };
-    
-    loadData();
+
+    fetchSubjects();
   }, []);
 
-  const onDelete = async (id: number) => {
-    if (!confirm("Delete this document?")) return;
-    const res = await fetch(`/api/uploads/${id}`, { method: "DELETE" });
-    const data = await res.json();
-    if (!res.ok) {
-      alert(data?.error || "Delete failed");
-      return;
-    }
-    const updatedUploads = uploads.filter((u) => u.id !== id);
-    setUploads(updatedUploads);
-    applyAllFilters(updatedUploads, typeFilter, query);
-  };
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-lg">Loading your subjects...</div>
+      </div>
+    );
+  }
 
-  const startEdit = (u: UploadItem) => {
-    setEditingId(u.id);
-    setEditForm({ description: u.description, instructor: u.instructor || "", subject: u.subject || "" });
-  };
-
-  const cancelEdit = () => {
-    setEditingId(null);
-  };
-
-  const saveEdit = async (id: number) => {
-    const res = await fetch(`/api/uploads/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        description: editForm.description,
-        instructor: editForm.instructor,
-        subject: editForm.subject,
-      }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      alert(data?.error || "Update failed");
-      return;
-    }
-    const updatedUploads = uploads.map((u) => (u.id === id ? { ...u, ...data.upload } : u));
-    setUploads(updatedUploads);
-    applyAllFilters(updatedUploads, typeFilter, query);
-    setEditingId(null);
-  };
-
-  const applyAllFilters = (uploadsList: UploadItem[], filter: string, q: string) => {
-    let list = filter === "all" ? uploadsList : uploadsList.filter(upload => upload.type === filter);
-    const queryLc = q.trim().toLowerCase();
-    if (queryLc) {
-      list = list.filter(upload => (
-        `${upload.description} ${upload.instructor ?? ''} ${upload.subject ?? ''} ${upload.type}`
-          .toLowerCase()
-          .includes(queryLc)
-      ));
-    }
-    setFilteredUploads(list);
-  };
-
-  const handleTypeFilterChange = (filter: string) => {
-    setTypeFilter(filter);
-    applyAllFilters(uploads, filter, query);
-  };
-
-  useEffect(() => {
-    applyAllFilters(uploads, typeFilter, query);
-  }, [uploads, typeFilter, query]);
-
-  // Removed unused getUniqueTypes to satisfy ESLint
+  if (error) {
+    return (
+      <div className="p-4 text-red-600">
+        Error: {error}
+      </div>
+    );
+  }
 
   return (
-    <div className="p-4 bg-white min-h-screen text-gray-900">
-      <h1 className="text-3xl font-bold mb-6 text-center text-gray-800">Upload Documents</h1>
+    <div className="flex h-screen bg-gray-100">
+      {/* Sidebar */}
 
-      <div className="max-w-3xl mx-auto mb-10">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-          <button
-            onClick={() => setShowForm(true)}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          >
-            Upload
-          </button>
-          <div className="flex items-center space-x-2">
-            <label htmlFor="typeFilter" className="text-sm font-medium text-gray-700">
-              Filter by Type:
-            </label>
-            <select
-              id="typeFilter"
-              value={typeFilter}
-              onChange={(e) => handleTypeFilterChange(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="all">All Types</option>
-              <option value="quiz">Quiz</option>
-              <option value="activity">Activity</option>
-              <option value="exam">Exam</option>
-            </select>
+      
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Top Navigation */}
+
+        
+        {/* Main Content */}
+        <main className="flex-1 overflow-y-auto bg-gray-100 p-6">
+          <div className="max-w-7xl mx-auto">
+            <div className="bg-white rounded-lg shadow">
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h1 className="text-2xl font-bold text-gray-800">My Subjects</h1>
+                </div>
+                
+                {subjects.length === 0 ? (
+                  <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded">
+                    <div className="flex">
+                      <div className="flex-shrink-0">
+                        <svg className="h-5 w-5 text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <div className="ml-3">
+                        <p className="text-sm text-yellow-700">
+                          You are not enrolled in any subjects yet. Please contact your instructor to be added to a subject.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Subject
+                          </th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Semester
+                          </th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Year
+                          </th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Actions
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {subjects.map((subject) => (
+                          <tr key={subject.subjectId} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm font-medium text-gray-900">{subject.title}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">{subject.semester}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">{subject.year}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                              <Link 
+                                href={`/pages/upload/${subject.subjectId}`}
+                                className="text-indigo-600 hover:text-indigo-900 hover:underline"
+                              >
+                                Upload Documents
+                              </Link>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-        </div>
-        <div className="flex items-center space-x-3">
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search uploads..."
-            aria-label="Search uploads"
-            className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-          <button onClick={loadUploads} className="px-3 py-2 bg-gray-200 rounded hover:bg-gray-300">Refresh List</button>
-        </div>
-        </div>
-
-        {showForm && (
-          <div className="mt-6">
-            <UploadForm
-              onSuccess={() => {
-                setShowForm(false);
-                loadUploads();
-              }}
-              onCancel={() => setShowForm(false)}
-            />
-          </div>
-        )}
-      </div>
-
-      <div className="overflow-x-auto bg-white rounded-lg shadow-md max-w-5xl mx-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Title/Description</th>
-             <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Instructor</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Subject</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Type</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">File</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {loading && (
-              <tr><td colSpan={7} className="px-6 py-4 text-sm text-gray-700">Loading...</td></tr>
-            )}
-            {!!error && (
-              <tr><td colSpan={7} className="px-6 py-4 text-sm text-red-600">{error}</td></tr>
-            )}
-            {filteredUploads.map((u) => (
-              <tr key={u.id} className="hover:bg-gray-50">
-              
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                  {editingId === u.id ? (
-                    <input className="border px-2 py-1 rounded w-full" value={editForm.description} onChange={(e)=>setEditForm((f)=>({...f, description: e.target.value}))} />
-                  ) : (
-                    u.description
-                  )}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                  {editingId === u.id ? (
-                    <select
-                      className="border px-2 py-1 rounded w-full"
-                      value={editForm.instructor}
-                      onChange={(e)=>setEditForm((f)=>({...f, instructor: e.target.value}))}
-                      disabled={loadingInstructors}
-                    >
-                      <option value="">Select an instructor</option>
-                      {instructors.map((i)=> (
-                        <option key={i.id} value={`${i.firstName} ${i.lastName}`}>
-                          {i.firstName} {i.lastName} ({i.username})
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    u.instructor || '-'
-                  )}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                  {editingId === u.id ? (
-                    <select
-                      className="border px-2 py-1 rounded w-full"
-                      value={editForm.subject}
-                      onChange={(e) => setEditForm(f => ({ ...f, subject: e.target.value }))}
-                      disabled={loadingSubjects}
-                    >
-                      <option value="">Select a subject</option>
-                      {subjects.map((subject) => (
-                        <option key={subject.subjectID} value={subject.title}>
-                          {subject.title}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    u.subject || '-'
-                  )}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                    {u.type || 'Unknown'}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-600">
-                  <a href={u.link} target="_blank" rel="noreferrer" className="underline">View</a>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 space-x-2">
-                  {editingId === u.id ? (
-                    <>
-                      <button onClick={()=>saveEdit(u.id)} className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700">Save</button>
-                      <button onClick={cancelEdit} className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300">Cancel</button>
-                    </>
-                  ) : (
-                    <>
-                      <button onClick={()=>startEdit(u)} className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">Edit</button>
-                      <button onClick={()=>onDelete(u.id)} className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700">Delete</button>
-                    </>
-                  )}
-                </td>
-              </tr>
-            ))}
-            {!loading && filteredUploads.length === 0 && uploads.length > 0 && !error && (
-              <tr><td colSpan={7} className="px-6 py-4 text-sm text-gray-500">No uploads match the selected filter.</td></tr>
-            )}
-            {!loading && uploads.length === 0 && !error && (
-              <tr><td colSpan={7} className="px-6 py-4 text-sm text-gray-500">No uploads yet.</td></tr>
-            )}
-          </tbody>
-        </table>
+        </main>
       </div>
     </div>
   );
-};
-
-export default Upload;
+}

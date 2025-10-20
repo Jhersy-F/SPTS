@@ -10,7 +10,6 @@ export const sidebarLinks = [
     label: "Monitoring of Submission",
   },
   {
-    
     route: "/pages/upload",
     label: "Upload",
   },

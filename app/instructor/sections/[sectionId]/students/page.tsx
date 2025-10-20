@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/components/ui/use-toast';
 import { Student } from '@prisma/client';
-import { Loader2, PlusCircle } from 'lucide-react';
+import { Loader2, PlusCircle, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
 export default function SectionStudentsPage() {
@@ -50,8 +50,16 @@ export default function SectionStudentsPage() {
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto px-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Students in Section</h1>
+      <div className="flex justify-between items-center mb-6">
+        <div className="flex items-center space-x-4">
+          <Button variant="outline" asChild>
+            <Link href="/instructor/subjects">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Subjects
+            </Link>
+          </Button>
+          <h1 className="text-2xl font-bold">Students</h1>
+        </div>
         <Button asChild>
           <Link href={`/instructor/sections/${sectionId}/students/add`}>
             <PlusCircle className="mr-2 h-4 w-4" />
