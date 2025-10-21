@@ -11,41 +11,71 @@ export const config = {
   },
 };
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
       return NextResponse.json({ error: 'Not authorized' }, { status: 401 });
     }
-    if (session.user.role !== 'student') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
+    const { searchParams } = new URL(request.url);
+    const subjectId = searchParams.get('subjectId');
+    const studentId = searchParams.get('studentId');
+    
+    // Build the where clause
+    const whereClause: any = {};
+    
+    // If studentId is provided (instructor viewing student's uploads)
+    if (studentId && !isNaN(Number(studentId))) {
+      // Only allow instructors to view other students' uploads
+      if (session.user.role === 'instructor') {
+        whereClause.studentId = Number(studentId);
+      } else if (session.user.role === 'student' && session.user.id !== studentId) {
+        // Students can only view their own uploads
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+    } else {
+      // If no studentId is provided, default to the current user's uploads
+      if (session.user.role !== 'student') {
+        return NextResponse.json({ error: 'Student ID is required' }, { status: 400 });
+      }
+      whereClause.studentId = Number(session.user.id);
+    }
+    
+    // Add subject filter if provided
+    if (subjectId && !isNaN(Number(subjectId))) {
+      whereClause.subjectID = Number(subjectId);
     }
 
     const uploadsRaw = await prisma.upload.findMany({
-      where: { studentId: Number(session.user.id) },
-      orderBy: { description: 'asc' }, // Sort by description in ascending order
+      where: whereClause,
+      orderBy: { createdAt: 'desc' },
       include: {
         instructor: { select: { firstName: true, lastName: true } },
         subject: { select: { title: true, subjectID: true } },
       },
     });
 
-    // Flatten response to keep existing client expectations
-    const responseUploads = uploadsRaw.map(u => ({
-      id: u.id,
-      title: u.title,
-      description: u.description,
-      type: u.type,
-      link: u.link,
-      subject: u.subject?.title ?? '-',
-      subjectID: u.subjectID,
-      instructor: u.instructor ? `${u.instructor.firstName} ${u.instructor.lastName}` : '-',
+    const responseUploads = uploadsRaw.map(upload => ({
+      id: upload.id,
+      title: upload.title,
+      description: upload.description,
+      type: upload.type,
+      link: upload.link,
+      subject: upload.subject?.title ?? '-',
+      subjectID: upload.subject?.subjectID ?? null,
+      instructor: upload.instructor ? 
+        `${upload.instructor.firstName} ${upload.instructor.lastName}` : '-',
+      createdAt: upload['createdAt'] // Include the createdAt field
     }));
 
-    return NextResponse.json({ uploads: responseUploads });
+    return NextResponse.json(responseUploads);
   } catch (error) {
     console.error('List uploads error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal server error' }, 
+      { status: 500 }
+    );
   }
 }
 
@@ -72,7 +102,7 @@ export async function POST(request: Request) {
     const title = formData.get('title') as string;
     const description = formData.get('description') as string;
     const type = formData.get('type') as string;
-    const instructorID = formData.get('instructorID') as string; // expecting numeric string
+    const instructorID = formData.get('instructorID') as string | null; // can be null if not provided
     const subjectIDRaw = formData.get('subjectID') as string;
 
     if (!file) {
@@ -125,8 +155,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validate instructorID
-    if (!instructorID || isNaN(Number(instructorID))) {
+    // Validate instructorID if provided
+    if (instructorID && isNaN(Number(instructorID))) {
       return NextResponse.json(
         { error: 'Invalid instructorID. It must be a number.' },
         { status: 400 }
@@ -141,17 +171,67 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+    
+    // Verify the subject exists
+    const subjectExists = await prisma.subject.findUnique({
+      where: { subjectID: subjectID }
+    });
+    
+    if (!subjectExists) {
+      return NextResponse.json(
+        { error: 'Invalid subject. The specified subject does not exist.' },
+        { status: 404 }
+      );
+    }
 
-    // Create upload record in database with optional title
+    // Get a default instructor if none provided
+    // First, try to find an instructor assigned to this subject
+    const subjectInstructor = await prisma.instructorSubject.findFirst({
+      where: { subjectId: subjectID },
+      orderBy: { assignedAt: 'desc' },
+      select: { instructorId: true }
+    });
+    
+    let instructorId = instructorID ? Number(instructorID) : subjectInstructor?.instructorId || null;
+    
+    if (!instructorId) {
+      // Try to get the first available instructor for the subject
+      const subjectInstructors = await prisma.instructorSubject.findMany({
+        where: { subjectId: subjectID },
+        take: 1,
+        orderBy: { assignedAt: 'desc' }
+      });
+      
+      if (subjectInstructors.length > 0) {
+        instructorId = subjectInstructors[0].instructorId;
+      } else {
+        // If no instructors found for the subject, get the first available instructor
+        const firstInstructor = await prisma.instructor.findFirst();
+        if (firstInstructor) {
+          instructorId = firstInstructor.id;
+        } else {
+          throw new Error('No instructors available. Please add an instructor first.');
+        }
+      }
+    }
+
+    // Create upload record in database
     const upload = await prisma.upload.create({
       data: {
-        title: title || 'Untitled', // Provide a default title if none provided
+        // Use the first 100 characters of the description as the title if not provided
+        title: (title && title.trim() !== '') 
+          ? title.substring(0, 100) 
+          : description.substring(0, 100),
         description,
         type: type.toLowerCase(),
         link: `/uploads/${uniqueFileName}`,
-        instructorID: Number(instructorID),
-        subjectID,
-        studentId: Number(session.user.id),
+        subject: { connect: { subjectID: subjectID } },
+        student: { connect: { id: Number(session.user.id) } },
+        instructor: { connect: { id: instructorId } }
+      },
+      include: {
+        instructor: { select: { firstName: true, lastName: true } },
+        subject: { select: { title: true } },
       },
     });
 

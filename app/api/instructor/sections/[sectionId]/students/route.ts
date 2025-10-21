@@ -4,9 +4,14 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
 export async function GET(
-  req: Request,
-  { params }: { params: { sectionId: string } }
+  request: Request,
+  context: { params: { sectionId: string } }
 ) {
+  // Get sectionId from context.params
+  const sectionId = parseInt(context.params.sectionId);
+  if (isNaN(sectionId)) {
+    return new NextResponse('Invalid section ID', { status: 400 });
+  }
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
@@ -15,7 +20,7 @@ export async function GET(
 
     // Verify the section exists and belongs to the instructor
     const section = await prisma.section.findUnique({
-      where: { id: parseInt(params.sectionId) },
+      where: { id: sectionId },
       include: {
         students: {
           include: {
@@ -43,23 +48,29 @@ export async function GET(
 }
 
 export async function POST(
-  req: Request,
-  { params }: { params: { sectionId: string } }
+  request: Request,
+  context: { params: { sectionId: string } }
 ) {
+  // Get sectionId from context.params
+  const sectionId = parseInt(context.params.sectionId);
+  if (isNaN(sectionId)) {
+    return new NextResponse('Invalid section ID', { status: 400 });
+  }
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
-    const { studentId } = await req.json();
+    const body = await request.json();
+    const { studentId } = body;
     if (!studentId) {
       return new NextResponse('Student ID is required', { status: 400 });
     }
 
     // Verify the section exists and belongs to the instructor
     const section = await prisma.section.findUnique({
-      where: { id: parseInt(params.sectionId) },
+      where: { id: sectionId },
     });
 
     if (!section) {
@@ -83,7 +94,7 @@ export async function POST(
     const existingEnrollment = await prisma.studentSection.findUnique({
       where: {
         sectionId_studentId: {
-          sectionId: section.id,
+          sectionId: sectionId,
           studentId: student.id,
         },
       },
@@ -96,7 +107,7 @@ export async function POST(
     // Add student to section
     await prisma.studentSection.create({
       data: {
-        sectionId: section.id,
+        sectionId: parseInt(sectionId),
         studentId: student.id,
       },
     });

@@ -1,58 +1,29 @@
 'use client';
-
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useForm, SubmitHandler, FieldError } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 
 const uploadSchema = z.object({
-  title: z.string().optional(),
-  description: z.string().min(1, 'Description is required'),
+  description: z.string().min(1, 'Title/Description is required'),
   type: z.enum(['quiz', 'activity', 'exam'], {
     required_error: 'Type is required',
   }),
-  instructorID: z.string().min(1, 'Instructor is required'),
-  // subjectID is now passed as a prop and not part of the form validation
+  // subjectID is passed as a prop and not part of the form validation
   file: z.custom<File | undefined | null>(() => true).optional(),
 });
- 
+
 type UploadFormProps = {
   onSuccess?: () => void;
   onCancel?: () => void;
   subjectID: string; // Subject ID is now a required prop
 };
 
-type Instructor = {
-  id: number;
-  firstName: string;
-  lastName: string;
-  username: string;
-};
 
 export default function UploadForm({ onSuccess, onCancel, subjectID }: UploadFormProps) {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [localFile, setLocalFile] = useState<File | null>(null);
-  const [instructors, setInstructors] = useState<Instructor[]>([]);
-
-  useEffect(() => {
-    const loadInstructors = async () => {
-      try {
-        const response = await fetch('/api/instructors');
-        const data = await response.json();
-        if (response.ok) {
-          setInstructors(data.instructors || []);
-        } else {
-          console.error('Failed to load instructors:', data.error);
-        }
-      } catch (error) {
-        console.error('Error loading instructors:', error);
-        setError('Failed to load instructors. Please try again.');
-      }
-    };
-    
-    loadInstructors();
-  }, []);
 
   type FormData = z.infer<typeof uploadSchema> & {
     subjectID: string;
@@ -76,14 +47,18 @@ export default function UploadForm({ onSuccess, onCancel, subjectID }: UploadFor
       }
 
       const formData = new FormData();
-      formData.append('title', data.title || '');
+      // Use the first 100 characters of the description as the title if needed
+      const title = data.description.length > 100 
+        ? data.description.substring(0, 100) 
+        : data.description;
+      
+      formData.append('title', title);
       formData.append('description', data.description);
       formData.append('type', data.type);
-      formData.append('instructorID', data.instructorID);
       formData.append('subjectID', subjectID);
       formData.append('file', localFile, localFile.name);
 
-      const response = await fetch('/api/upload', {
+      const response = await fetch('/api/uploads', {
         method: 'POST',
         body: formData,
       });
@@ -107,24 +82,12 @@ export default function UploadForm({ onSuccess, onCancel, subjectID }: UploadFor
     <div className="max-w-md mx-auto">
       <form onSubmit={handleSubmit(onSubmit)}>
         <div className="flex flex-col gap-3">
-          <label htmlFor="title" className="block text-sm font-medium mb-1">Title</label>
-          <input
-            type="text"
-            id="title"
-            className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            {...register('title')}
-          />
-          {errors.title && (
-            <p className="text-red-500 text-sm mt-1">{(errors.title as FieldError)?.message}</p>
-          )}
-        </div>
-
-        <div className="flex flex-col gap-3">
-          <label htmlFor="description" className="block text-sm font-medium mb-1">Description</label>
+          <label htmlFor="description" className="block text-sm font-medium mb-1">Title/Description</label>
           <textarea
             id="description"
             className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             rows={4}
+            placeholder="Enter a title and description for your document"
             {...register('description')}
           />
           {errors.description && (
@@ -145,24 +108,6 @@ export default function UploadForm({ onSuccess, onCancel, subjectID }: UploadFor
           </select>
           {errors.type && (
             <p className="text-red-500 text-sm mt-1">{(errors.type as FieldError)?.message}</p>
-          )}
-        </div>
-
-        <div className="flex flex-col gap-3">
-          <label htmlFor="instructorID" className="block text-sm font-medium mb-1">Instructor</label>
-          <select
-            id="instructorID"
-            className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            {...register('instructorID')}
-          >
-            {instructors.map((instructor) => (
-              <option key={instructor.id} value={instructor.id}>
-                {instructor.firstName} {instructor.lastName}
-              </option>
-            ))}
-          </select>
-          {errors.instructorID && (
-            <p className="text-red-500 text-sm mt-1">{(errors.instructorID as FieldError)?.message}</p>
           )}
         </div>
 

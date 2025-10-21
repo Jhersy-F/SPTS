@@ -13,23 +13,32 @@ import Link from 'next/link';
 export default function SectionStudentsPage() {
   const { sectionId } = useParams();
   const [students, setStudents] = useState<Student[]>([]);
+  const [section, setSection] = useState<{instructorSubjectSubjectId?: number} | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
-    const fetchStudents = async () => {
+    const fetchData = async () => {
       try {
-        const response = await fetch(`/api/instructor/sections/${sectionId}/students`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch students');
-        }
-        const data = await response.json();
-        setStudents(data);
+        setIsLoading(true);
+        
+        // Fetch section details first to get instructorSubjectSubjectId
+        const sectionRes = await fetch(`/api/instructor/sections/${sectionId}`);
+        if (!sectionRes.ok) throw new Error('Failed to fetch section details');
+        const sectionData = await sectionRes.json();
+        setSection(sectionData);
+
+        // Then fetch students
+        const studentsRes = await fetch(`/api/instructor/sections/${sectionId}/students`);
+        if (!studentsRes.ok) throw new Error('Failed to fetch students');
+        const studentsData = await studentsRes.json();
+        
+        setStudents(studentsData);
       } catch (error) {
-        console.error('Error fetching students:', error);
+        console.error('Error fetching data:', error);
         toast({
           title: 'Error',
-          description: 'Failed to load students. Please try again.',
+          description: 'Failed to load data. Please try again.',
           variant: 'destructive',
         });
       } finally {
@@ -37,7 +46,7 @@ export default function SectionStudentsPage() {
       }
     };
 
-    fetchStudents();
+    fetchData();
   }, [sectionId, toast]);
 
   if (isLoading) {
@@ -103,7 +112,9 @@ export default function SectionStudentsPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <Button variant="ghost" size="sm" asChild>
-                          <Link href={`/instructor/students/${student.id}`}>View</Link>
+                          <Link href={`/instructor/students/${student.id}/uploads?subjectid=${section?.instructorSubjectSubjectId || ''}`}>
+                            View Uploads
+                          </Link>
                         </Button>
                       </TableCell>
                     </TableRow>

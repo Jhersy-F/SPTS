@@ -1,17 +1,19 @@
 'use client';
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 
 interface Upload {
   id: number;
   title: string;
-  description:string;
+  description: string;
   link: string;
   uploadedAt: string;
   type: string;
+  subjectID: number;
   subject: {
     id: number;
+    subjectID: number;
     title: string;
   };
 }
@@ -24,9 +26,11 @@ interface Student {
 }
 
 export default function StudentUploadsPage() {
-  const { studentId } = useParams<{ studentId: string }>();
+  const params = useParams();
+  const studentId = params.studentId as string;
   const searchParams = useSearchParams();
-  const subjectId = searchParams.get('subjectId');
+  const subjectIdParam = searchParams.get('subjectid');
+  const subjectId = subjectIdParam ? parseInt(subjectIdParam) : undefined;
   const router = useRouter();
 
   const [student, setStudent] = useState<Student | null>(null);
@@ -36,59 +40,43 @@ export default function StudentUploadsPage() {
   const [error, setError] = useState<string | null>(null);
   const [subjectName, setSubjectName] = useState('');
 
-  // New state for filters
-  const [subjectFilter, setSubjectFilter] = useState('');
-  const [typeFilter, setTypeFilter] = useState('');
+  // State for search and type filter
   const [searchQuery, setSearchQuery] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
+  const [subjects, setSubjects] = useState<Array<{id: number, title: string}>>([]);
 
-  // Get unique subjects and types for dropdowns
-  const subjects = useMemo(() => {
-    const subs = new Set(allUploads.map(upload => upload.subject?.title).filter(Boolean));
-    return Array.from(subs).map(title => ({
-      value: title || '',
-      label: title || 'No Subject'
-    }));
-  }, [allUploads]);
-
-  const types = useMemo(() => {
-    const typeSet = new Set([
-      ...allUploads.map(upload => upload.type).filter(Boolean),
-      'activity',
-      'exam', 
-      'quiz'
-    ]);
-    return Array.from(typeSet).map(type => ({
-      value: type,
-      label: type.charAt(0).toUpperCase() + type.slice(1) // Capitalize first letter
-    }));
-  }, [allUploads]);
-
-  // Apply filters
   useEffect(() => {
     let filtered = [...allUploads];
 
-    if (subjectFilter) {
-      filtered = filtered.filter(upload =>
-        upload.subject?.title === subjectFilter
-      );
-    }
+    // Debug logs
 
+        // Filter by subject ID from URL if present
+        if (typeof subjectId === 'number') {
+          filtered = filtered.filter(upload => {
+            const uploadSubjectId = upload.subjectID || (upload.subject?.subjectID || null);
+            return uploadSubjectId === subjectId;
+          });
+        }
+
+    // Apply type filter
     if (typeFilter) {
       filtered = filtered.filter(upload =>
         upload.type === typeFilter
       );
     }
 
+    // Apply search query
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(upload =>
-        upload.title.toLowerCase().includes(query) ||
+        (upload.title?.toLowerCase().includes(query) || false) ||
+        (upload.description?.toLowerCase().includes(query) || false) ||
         (upload.subject?.title?.toLowerCase().includes(query) || false)
       );
     }
 
     setUploads(filtered);
-  }, [allUploads, subjectFilter, typeFilter, searchQuery]);
+  }, [allUploads, typeFilter, searchQuery, subjectId]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -106,20 +94,49 @@ export default function StudentUploadsPage() {
           const subjectRes = await fetch(`/api/subjects/${subjectId}`);
           if (subjectRes.ok) {
             const subjectData = await subjectRes.json();
-            setSubjectName(subjectData.title || 'Selected Subject');
-            setSubjectFilter(subjectData.title || '');
+            // Check if we got a single subject or a list
+            const subject = subjectData.subject || subjectData.subjects?.[0] || subjectData;
+            setSubjectName(subject?.title || 'Selected Subject');
           }
         }
+        // Fetch all subjects and ensure they have unique IDs
+        const subjectsRes = await fetch('/api/subjects');
+        if (subjectsRes.ok) {
+          const data = await subjectsRes.json();
+          // Ensure we have valid subjects with IDs before setting state
+          interface SubjectData {
+            id?: number;
+            subjectID?: number;
+            title?: string;
+            name?: string;
+          }
 
-        // Fetch uploads for this student
-        const uploadsUrl = subjectId
+          interface SubjectItem {
+            id: string;
+            title: string;
+          }
+
+          const validSubjects = (data.subjects || [] as SubjectData[])
+            .filter((s: SubjectData) => (s?.id || s?.subjectID) && (s.title || s.name))
+            .map((s: SubjectData, index: number): SubjectItem => ({
+              id: String(s.id || s.subjectID || `temp-${index}`),
+              title: s.title || s.name || `Subject ${index + 1}`,
+            }))
+            .filter((subject: SubjectItem, index: number, self: SubjectItem[]) => 
+              index === self.findIndex((s: SubjectItem) => s.id === subject.id)
+            );
+          
+          setSubjects(validSubjects);
+        }
+
+        // Fetch uploads with subject filter on the server
+        const uploadsUrl = subjectId 
           ? `/api/students/${studentId}/uploads?subjectId=${subjectId}`
           : `/api/students/${studentId}/uploads`;
 
         const uploadsRes = await fetch(uploadsUrl);
         if (!uploadsRes.ok) throw new Error('Failed to fetch uploads');
         const uploadsData = await uploadsRes.json();
-
         setAllUploads(uploadsData.uploads || []);
         setUploads(uploadsData.uploads || []);
       } catch (err) {
@@ -135,9 +152,8 @@ export default function StudentUploadsPage() {
     }
   }, [studentId, subjectId]);
 
-  const handleDownload = (link: string, description: string) => {
-    // In a real app, you would handle the file download here
-    // For now, we'll just open the file in a new tab
+  const handleDownload = (link: string) => {
+    // Open the file in a new tab
     window.open(link, '_blank');
   };
 
@@ -189,13 +205,13 @@ export default function StudentUploadsPage() {
           onClick={() => router.back()}
           className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
         >
-          Back to Students
+          Back
         </button>
       </div>
 
       {/* Filter Section */}
       <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Search Input */}
           <div>
             <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-1">
@@ -211,30 +227,10 @@ export default function StudentUploadsPage() {
             />
           </div>
 
-          {/* Subject Dropdown */}
-          <div>
-            <label htmlFor="subject" className="block text-sm font-medium text-gray-700 mb-1">
-              Subject
-            </label>
-            <select
-              id="subject"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              value={subjectFilter}
-              onChange={(e) => setSubjectFilter(e.target.value)}
-            >
-              <option value="">All Subjects</option>
-              {subjects.map((subject) => (
-                <option key={subject.value} value={subject.value}>
-                  {subject.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
           {/* Type Dropdown */}
           <div>
             <label htmlFor="type" className="block text-sm font-medium text-gray-700 mb-1">
-              Type
+              Document Type
             </label>
             <select
               id="type"
@@ -243,27 +239,45 @@ export default function StudentUploadsPage() {
               onChange={(e) => setTypeFilter(e.target.value)}
             >
               <option value="">All Types</option>
-              {types.map((type) => (
-                <option key={type.value} value={type.value}>
-                  {type.label}
-                </option>
-              ))}
+              <option value="activity">Activity</option>
+              <option value="exam">Exam</option>
+              <option value="quiz">Quiz</option>
             </select>
           </div>
-
-          {/* Clear Filters Button */}
-          <div className="flex items-end">
-            <button
-              onClick={() => {
-                setSubjectFilter('');
-                setTypeFilter('');
-                setSearchQuery('');
-              }}
-              className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 w-full"
-            >
-              Clear Filters
-            </button>
-          </div>
+        </div>
+        
+        {/* Subject Selection */}
+        <div className="mt-4">
+          <label htmlFor="subject" className="block text-sm font-medium text-gray-700 mb-1">
+            Select Subject
+          </label>
+          <select
+            id="subject"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            value={subjectId || ''}
+            onChange={(e) => {
+              const newSubjectId = e.target.value;
+              // Update URL with the new subject ID
+              const searchParams = new URLSearchParams();
+              if (newSubjectId) {
+                searchParams.set('subjectId', newSubjectId);
+              }
+              const queryString = searchParams.toString();
+              router.push(`/instructor/students/${studentId}/uploads${queryString ? `?${queryString}` : ''}`);
+            }}
+          >
+            <option key="all-subjects" value="">All Subjects</option>
+            {subjects?.map((subject, index) => {
+              // Ensure we have a valid key and value
+              const subjectId = subject.id || `subject-${index}`;
+              const displayTitle = subject.title || `Subject ${index + 1}`;
+              return (
+                <option key={`subject-${subjectId}-${index}`} value={subjectId}>
+                  {displayTitle}
+                </option>
+              );
+            })}
+          </select>
         </div>
       </div>
 
