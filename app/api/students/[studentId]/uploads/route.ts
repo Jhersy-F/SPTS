@@ -30,7 +30,7 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const subjectIdParam = searchParams.get('subjectId');
     const subjectId = subjectIdParam ? parseInt(subjectIdParam) : undefined;
-
+   
     // Build the where clause
     const where: {
       studentId: number;
@@ -65,7 +65,7 @@ export async function GET(
       },
       orderBy: {
         title: 'desc',
-      },
+      }, 
     });
 
     return NextResponse.json({ uploads });

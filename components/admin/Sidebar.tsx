@@ -7,10 +7,11 @@ import { signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 
 const nav = [
-  { href: "/admin/home", label: "Home" },
-  { href: "/admin/students", label: "Students" },
-  { href: "/admin/instructors", label: "Instructors" },
-  { href: "/admin/subjects", label: "Subjects" },
+  { href: "/admin/home", label: "Dashboard" },
+  { href: "/admin/students", label: "Manage Students" },
+  { href: "/admin/instructors", label: "Manage Instructors" },
+  { href: "/admin/subjects", label: "Manage Subjects" },
+  { href: "/admin/instructions", label: "Instructions" },
 ];
 
 export default function AdminSidebar() {

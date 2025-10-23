@@ -43,20 +43,13 @@ export default function StudentUploadsPage() {
   // State for search and type filter
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
-  const [subjects, setSubjects] = useState<Array<{id: number, title: string}>>([]);
 
   useEffect(() => {
     let filtered = [...allUploads];
 
     // Debug logs
 
-        // Filter by subject ID from URL if present
-        if (typeof subjectId === 'number') {
-          filtered = filtered.filter(upload => {
-            const uploadSubjectId = upload.subjectID || (upload.subject?.subjectID || null);
-            return uploadSubjectId === subjectId;
-          });
-        }
+       
 
     // Apply type filter
     if (typeFilter) {
@@ -77,7 +70,9 @@ export default function StudentUploadsPage() {
 
     setUploads(filtered);
   }, [allUploads, typeFilter, searchQuery, subjectId]);
-
+  useEffect(()=>{
+    console.log(uploads);
+  })
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -99,35 +94,6 @@ export default function StudentUploadsPage() {
             setSubjectName(subject?.title || 'Selected Subject');
           }
         }
-        // Fetch all subjects and ensure they have unique IDs
-        const subjectsRes = await fetch('/api/subjects');
-        if (subjectsRes.ok) {
-          const data = await subjectsRes.json();
-          // Ensure we have valid subjects with IDs before setting state
-          interface SubjectData {
-            id?: number;
-            subjectID?: number;
-            title?: string;
-            name?: string;
-          }
-
-          interface SubjectItem {
-            id: string;
-            title: string;
-          }
-
-          const validSubjects = (data.subjects || [] as SubjectData[])
-            .filter((s: SubjectData) => (s?.id || s?.subjectID) && (s.title || s.name))
-            .map((s: SubjectData, index: number): SubjectItem => ({
-              id: String(s.id || s.subjectID || `temp-${index}`),
-              title: s.title || s.name || `Subject ${index + 1}`,
-            }))
-            .filter((subject: SubjectItem, index: number, self: SubjectItem[]) => 
-              index === self.findIndex((s: SubjectItem) => s.id === subject.id)
-            );
-          
-          setSubjects(validSubjects);
-        }
 
         // Fetch uploads with subject filter on the server
         const uploadsUrl = subjectId 
@@ -137,8 +103,10 @@ export default function StudentUploadsPage() {
         const uploadsRes = await fetch(uploadsUrl);
         if (!uploadsRes.ok) throw new Error('Failed to fetch uploads');
         const uploadsData = await uploadsRes.json();
+        
         setAllUploads(uploadsData.uploads || []);
         setUploads(uploadsData.uploads || []);
+         
       } catch (err) {
         console.error('Error fetching data:', err);
         setError(err instanceof Error ? err.message : 'An error occurred');
@@ -146,7 +114,7 @@ export default function StudentUploadsPage() {
         setLoading(false);
       }
     };
-
+    
     if (studentId) {
       fetchData();
     }
@@ -246,43 +214,10 @@ export default function StudentUploadsPage() {
           </div>
         </div>
         
-        {/* Subject Selection */}
-        <div className="mt-4">
-          <label htmlFor="subject" className="block text-sm font-medium text-gray-700 mb-1">
-            Select Subject
-          </label>
-          <select
-            id="subject"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            value={subjectId || ''}
-            onChange={(e) => {
-              const newSubjectId = e.target.value;
-              // Update URL with the new subject ID
-              const searchParams = new URLSearchParams();
-              if (newSubjectId) {
-                searchParams.set('subjectId', newSubjectId);
-              }
-              const queryString = searchParams.toString();
-              router.push(`/instructor/students/${studentId}/uploads${queryString ? `?${queryString}` : ''}`);
-            }}
-          >
-            <option key="all-subjects" value="">All Subjects</option>
-            {subjects?.map((subject, index) => {
-              // Ensure we have a valid key and value
-              const subjectId = subject.id || `subject-${index}`;
-              const displayTitle = subject.title || `Subject ${index + 1}`;
-              return (
-                <option key={`subject-${subjectId}-${index}`} value={subjectId}>
-                  {displayTitle}
-                </option>
-              );
-            })}
-          </select>
-        </div>
       </div>
 
       <div className="overflow-x-auto bg-white rounded-lg shadow-md w-4/5 mx-auto">
-        {uploads.length > 0 ? (
+        {uploads ? (
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-100">
               <tr>
@@ -301,7 +236,7 @@ export default function StudentUploadsPage() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {uploads.map((upload) => (
+              {uploads && uploads.map((upload) => (
                 <tr key={`upload-${upload.id}`} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">
@@ -316,7 +251,7 @@ export default function StudentUploadsPage() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
                     <button
-                      onClick={() => handleDownload(upload.link, upload.title)}
+                      onClick={() => handleDownload(upload.link)}
                       className="text-blue-600 hover:text-blue-900 hover:underline mr-4"
                     >
                       Download
