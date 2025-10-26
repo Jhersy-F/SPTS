@@ -134,13 +134,22 @@ export default function InstructorSubjectsPage() {
       const response = await fetch('/api/instructor/subjects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subjectId }),
+        body: JSON.stringify({ 
+          subjectId,
+          semester: editSubjectData.semester,
+          year: editSubjectData.year
+        }),
         credentials: 'include',
       });
 
+      const data = await response.json().catch(() => null);
+      
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Failed to add subject');
+        console.error('Failed to add subject:', { status: response.status, data });
+        throw new Error(
+          (data && (data.message || data.error)) || 
+          `Failed to add subject (${response.status})`
+        );
       }
       
       setSelectedSubjectId('');
@@ -149,7 +158,7 @@ export default function InstructorSubjectsPage() {
       console.error('Error adding subject:', error);
       setError(error instanceof Error ? error.message : 'Failed to add subject');
     }
-  }, [fetchMySubjects]);
+  }, [fetchMySubjects, editSubjectData]);
 
 
   const handleAddSection = async (subjectId: number) => {
@@ -308,7 +317,7 @@ export default function InstructorSubjectsPage() {
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900">My Subjects</h1>
           
-          {/* Add Subject Button */}
+          {/* Add Subject Form */}
           <div className="flex items-center space-x-4">
             <select
               value={selectedSubjectId}
@@ -317,13 +326,30 @@ export default function InstructorSubjectsPage() {
             >
               <option value="">Select a subject to add</option>
               {allSubjects
-                .filter(subject => !subjects.some(s => s.subjectId === subject.subjectId))
+                //.filter(subject => !subjects.some(s => s.subjectId === subject.subjectId))
                 .map((subject) => (
                   <option key={`add-subject-${subject.subjectId}`} value={String(subject.subjectId)}>
                     {subject.title}
                   </option>
                 ))}
             </select>
+            <select
+              value={editSubjectData.semester}
+              onChange={(e) => setEditSubjectData({ ...editSubjectData, semester: e.target.value })}
+              className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="1st Semester">1st Semester</option>
+              <option value="2nd Semester">2nd Semester</option>
+              <option value="Summer">Summer</option>
+            </select>
+            <input
+              type="number"
+              value={editSubjectData.year}
+              onChange={(e) => setEditSubjectData({ ...editSubjectData, year: parseInt(e.target.value) })}
+              className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-24"
+              min={2000}
+              max={9999}
+            />
             <button
               onClick={() => selectedSubjectId && handleAddSubject(parseInt(selectedSubjectId))}
               disabled={!selectedSubjectId}

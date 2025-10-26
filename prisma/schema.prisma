@@ -15,9 +15,9 @@ model Student {
   middleName    String?         @db.VarChar(255)
   lastName      String          @db.VarChar(255)
   extensionName String?         @db.VarChar(10)
-  password      String          @db.VarChar(255)
-  uploads       Upload[]
+  password      String          @db.VarChar(255) 
   sections      StudentSection[]
+  uploads       Upload[]
 }
 
 model Upload {
@@ -55,6 +55,7 @@ model Subject {
 }
 
 model InstructorSubject {
+  id           Int        @id @default(autoincrement())
   instructor   Instructor @relation(fields: [instructorId], references: [id])
   instructorId Int
   subject      Subject    @relation(fields: [subjectId], references: [subjectID])
@@ -63,20 +64,17 @@ model InstructorSubject {
   year         Int
   assignedAt   DateTime   @default(now())
   sections     Section[]
-
-  @@id([instructorId, subjectId])
 }
 
 model Section {
   id                Int                @id @default(autoincrement())
   name              String             @db.VarChar(100)
-  instructorSubject InstructorSubject  @relation(fields: [instructorSubjectInstructorId, instructorSubjectSubjectId], references: [instructorId, subjectId])
-  instructorSubjectInstructorId Int
-  instructorSubjectSubjectId    Int
+  instructorSubject InstructorSubject  @relation(fields: [instructorSubjectId], references: [id])
+  instructorSubjectId Int
   students          StudentSection[]
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
-  @@unique([instructorSubjectInstructorId, instructorSubjectSubjectId, name])
+  @@unique([instructorSubjectId, name])
 }
 
 model StudentSection {

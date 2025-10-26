@@ -11,7 +11,14 @@ import { toast } from '@/components/ui/use-toast';
 type Instructor = {
   id: number;
   username: string;
-  email: string;
+  firstName: string;
+  middleName?: string;
+  lastName: string;
+  extensionName?: string;
+};
+
+type InstructorFormData = {
+  username: string;
   firstName: string;
   middleName?: string;
   lastName: string;
@@ -28,9 +35,8 @@ export default function AdminInstructorsPage() {
   const [loadingData, setLoadingData] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingInstructor, setEditingInstructor] = useState<Instructor | null>(null);
-  const [formData, setFormData] = useState<Omit<Instructor, 'id'>>({ 
+  const [formData, setFormData] = useState<InstructorFormData>({ 
     username: '',
-    email: '',
     firstName: '',
     middleName: '',
     lastName: '',
@@ -50,7 +56,6 @@ export default function AdminInstructorsPage() {
   const resetForm = () => {
     setFormData({
       username: '',
-      email: '',
       firstName: '',
       middleName: '',
       lastName: '',
@@ -109,17 +114,28 @@ export default function AdminInstructorsPage() {
       
       const method = editingInstructor ? 'PUT' : 'POST';
       
+      // If creating new instructor, add password = lastName
+      // Send just the form data without passwords - they will be handled server-side
+      const dataToSubmit = formData;
+
       const response = await fetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(dataToSubmit),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to save instructor');
+        // Handle validation errors
+        if (errorData.error?.fieldErrors) {
+          const errors = Object.entries(errorData.error.fieldErrors)
+            .map(([field, messages]) => `${field}: ${(messages as string[]).join(', ')}`)
+            .join('\n');
+          throw new Error(`Validation failed:\n${errors}`);
+        }
+        throw new Error(typeof errorData.error === 'string' ? errorData.error : 'Failed to save instructor');
       }
 
       toast({
@@ -147,7 +163,6 @@ export default function AdminInstructorsPage() {
     setEditingInstructor(instructor);
     setFormData({
       username: instructor.username,
-      email: instructor.email || '',
       firstName: instructor.firstName,
       middleName: instructor.middleName || '',
       lastName: instructor.lastName,
@@ -201,8 +216,7 @@ export default function AdminInstructorsPage() {
       (instructor.firstName?.toLowerCase() || '').includes(term) ||
       (instructor.lastName?.toLowerCase() || '').includes(term) ||
       (instructor.middleName?.toLowerCase() || '').includes(term) ||
-      (instructor.extensionName?.toLowerCase() || '').includes(term) ||
-      (instructor.email?.toLowerCase() || '').includes(term)
+      (instructor.extensionName?.toLowerCase() || '').includes(term)
     );
     setFilteredInstructors(filtered);
   }, [searchTerm, instructors]);
@@ -258,16 +272,6 @@ export default function AdminInstructorsPage() {
                 <Input
                   name="username"
                   value={formData.username}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Email *</label>
-                <Input
-                  type="email"
-                  name="email"
-                  value={formData.email}
                   onChange={handleInputChange}
                   required
                 />
@@ -339,9 +343,6 @@ export default function AdminInstructorsPage() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Name
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Email
-                </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
@@ -350,13 +351,13 @@ export default function AdminInstructorsPage() {
             <tbody className="bg-white divide-y divide-gray-200">
               {loadingData ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-4 text-center">
+                  <td colSpan={3} className="px-6 py-4 text-center">
                     Loading...
                   </td>
                 </tr>
               ) : filteredInstructors.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-4 text-center text-gray-500">
+                  <td colSpan={3} className="px-6 py-4 text-center text-gray-500">
                     {searchTerm ? 'No matching instructors found' : 'No instructors found'}
                   </td>
                 </tr>
@@ -368,9 +369,6 @@ export default function AdminInstructorsPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {`${instructor.lastName}${instructor.extensionName ? ' ' + instructor.extensionName + ',' : ','} ${instructor.firstName} ${instructor.middleName || ''}`.trim()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {instructor.email || 'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
                       <Button

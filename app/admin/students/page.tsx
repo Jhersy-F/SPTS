@@ -15,7 +15,6 @@ type Student = {
   middleName?: string;
   lastName: string;
   extensionName?: string;
-  email: string;
   _count?: { uploads: number };
 };
 
@@ -34,7 +33,7 @@ export default function AdminStudentsPage() {
     middleName: '',
     lastName: '',
     extensionName: '',
-    email: ''
+
   });
 
   // Handle form input changes
@@ -54,7 +53,7 @@ export default function AdminStudentsPage() {
       middleName: '',
       lastName: '',
       extensionName: '',
-      email: ''
+     
     });
     setEditingStudent(null);
   };
@@ -148,8 +147,8 @@ export default function AdminStudentsPage() {
       firstName: student.firstName,
       middleName: student.middleName || '',
       lastName: student.lastName,
-      extensionName: student.extensionName || '',
-      email: student.email || ''
+      extensionName: student.extensionName || ''
+ 
     });
     setIsAddDialogOpen(true);
   };
@@ -199,8 +198,7 @@ export default function AdminStudentsPage() {
       (student.firstName?.toLowerCase() || '').includes(term) ||
       (student.lastName?.toLowerCase() || '').includes(term) ||
       (student.middleName?.toLowerCase() || '').includes(term) ||
-      (student.extensionName?.toLowerCase() || '').includes(term) ||
-      (student.email?.toLowerCase() || '').includes(term)
+      (student.extensionName?.toLowerCase() || '').includes(term) 
     );
     setFilteredStudents(filtered);
   }, [searchTerm, students]);
@@ -296,16 +294,7 @@ export default function AdminStudentsPage() {
                   onChange={handleInputChange}
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Email *</label>
-                <Input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
+            
               <div className="flex justify-end gap-2 pt-4">
                 <Button
                   type="button"
@@ -338,9 +327,7 @@ export default function AdminStudentsPage() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Name
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Email
-                  </th>
+              
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Uploads
                   </th>
@@ -371,9 +358,7 @@ export default function AdminStudentsPage() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {`${student.lastName}${student.extensionName ? ' ' + student.extensionName + ',' : ','} ${student.firstName} ${student.middleName || ''}`.trim()}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {student.email || 'N/A'}
-                      </td>
+                 
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {student._count?.uploads || 0}
                       </td>
@@ -410,9 +395,7 @@ export default function AdminStudentsPage() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Name
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Email
-                </th>
+              
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Uploads
                 </th>
@@ -430,9 +413,7 @@ export default function AdminStudentsPage() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {`${student.lastName}${student.extensionName ? ' ' + student.extensionName + ',' : ','} ${student.firstName} ${student.middleName || ''}`.trim()}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {student.email || 'N/A'}
-                  </td>
+               
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {student._count?.uploads || 0}
                   </td>

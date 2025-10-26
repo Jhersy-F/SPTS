@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
-import { instructorSchema } from '@/lib/validations';
+import { generateDefaultPassword } from '@/lib/actions/password';
 
 export async function GET() {
   try {
@@ -39,12 +39,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const parsed = instructorSchema.safeParse(body);
-    if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
-    }
-
-    const { username, firstName, middleName, lastName, extensionName, password } = parsed.data;
+    const { username, firstName, middleName, lastName, extensionName } = body;
 
     // Check if username already exists
     const existing = await prisma.instructor.findUnique({ where: { username } });
@@ -52,7 +47,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Username already exists' }, { status: 409 });
     }
 
-    const hashed = await bcrypt.hash(password, 10);
+    // Generate and hash the default password
+    // Generate and hash the default password (lastName@123)
+    const defaultPassword = `${lastName}@123`;
+    const hashedPassword = await bcrypt.hash(defaultPassword, 10);
     const created = await prisma.instructor.create({
       data: {
         username,
@@ -60,7 +58,7 @@ export async function POST(request: Request) {
         middleName,
         lastName,
         extensionName,
-        password: hashed,
+        password: hashedPassword,
       },
       select: { 
         id: true, 

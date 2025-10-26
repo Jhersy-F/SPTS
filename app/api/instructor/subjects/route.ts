@@ -43,45 +43,76 @@ export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
-      return new NextResponse('Unauthorized', { status: 401 });
+      return NextResponse.json(
+        { message: 'You must be logged in to perform this action' },
+        { status: 401 }
+      );
     }
 
-    const { subjectId } = await req.json();
+    const { subjectId, semester, year } = await req.json();
     if (!subjectId) {
-      return new NextResponse('Subject is required', { statusText:"Title is required",status: 403 });
+      return NextResponse.json(
+        { message: 'Subject ID is required' },
+        { status: 400 }
+      );
     }
-
-
-    // Check if the instructor already has this subject
-    const existingLink = await prisma.instructorSubject.findFirst({
-      where: {
-        instructor: { id: parseInt(session.user.id) },
-        subjectId: subjectId,
-      },
-    });
-
-    if (existingLink) {
-      return new NextResponse('Subject already assigned to instructor', {statusText:"Subject already assigned to instructor", status: 400 });
+    if (!semester) {
+      return NextResponse.json(
+        { message: 'Semester is required' },
+        { status: 400 }
+      );
+    }
+    if (!year || typeof year !== 'number' || year < 2000 || year > 9999) {
+      return NextResponse.json(
+        { message: 'Year must be a valid year between 2000 and 9999' },
+        { status: 400 }
+      );
     }
 
     // Link the subject to the instructor
-    await prisma.instructor.update({
-      where: { id: parseInt(session.user.id) },
+    await prisma.instructorSubject.create({
       data: {
-        subjects: {
-          create: {
-            subject: {
-              connect: { subjectID: subjectId },
-            },
-          },
+        instructor: {
+          connect: { id: parseInt(session.user.id) }
         },
-      },
+        subject: {
+          connect: { subjectID: parseInt(subjectId) }
+        },
+        semester: semester,
+        year: year
+      }
     });
 
-    return NextResponse.json({ subjectId: subjectId});
+      return NextResponse.json({ 
+        message: 'Subject assigned successfully',
+        subjectId,
+        semester,
+        year 
+      });
   } catch (error) {
-    console.error('Error adding subject:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+    // Log the detailed error for debugging
+    if (error instanceof Error) {
+      console.error('Error adding subject:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      });
+    } else {
+      console.error('Error adding subject:', error);
+    }
+
+    // Check for specific Prisma errors
+    if (error instanceof Error && error.message.includes('Foreign key constraint failed')) {
+      return NextResponse.json(
+        { message: 'Invalid subject ID - subject does not exist' },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json(
+      { message: 'An error occurred while adding the subject', details: error instanceof Error ? error.message : undefined },
+      { status: 500 }
+    );
   }
 }
 
