@@ -26,7 +26,8 @@ export async function GET() {
     }
 
     const subjects = instructor.subjects.map((item) => ({
-      subjectId: item.subject.subjectID,
+      id: item.id,  // Include the InstructorSubject id
+      subjectId: item.subject.subjectID, // Keep as number
       title: item.subject.title,
       semester: item.semester,
       year: item.year,
@@ -62,9 +63,9 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
-    if (!year || typeof year !== 'number' || year < 2000 || year > 9999) {
+    if (!year || typeof year !== 'string' || year.trim() === '') {
       return NextResponse.json(
-        { message: 'Year must be a valid year between 2000 and 9999' },
+        { message: 'Year is required and must be a non-empty string' },
         { status: 400 }
       );
     }

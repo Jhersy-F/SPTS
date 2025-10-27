@@ -4,117 +4,165 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
 export async function GET(
-  request: Request,
+  req: Request,
   context: { params: { sectionId: string } }
 ) {
-  // Get sectionId from context.params
-  const sectionId = parseInt(context.params.sectionId);
-  if (isNaN(sectionId)) {
-    return new NextResponse('Invalid section ID', { status: 400 });
-  }
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
-      return new NextResponse('Unauthorized', { status: 401 });
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
     }
 
-    // Verify the section exists and belongs to the instructor
-    const section = await prisma.section.findUnique({
-      where: { id: sectionId },
-      include: {
-        students: {
-          include: {
-            student: true
-          }
+    const { sectionId } = context.params;
+    const parsedSectionId = parseInt(sectionId);
+    
+    if (isNaN(parsedSectionId)) {
+      return NextResponse.json(
+        { error: 'Invalid section ID' },
+        { status: 400 }
+      );
+    }
+
+    // Verify the instructor has access to this section
+    // First check if section exists and belongs to instructor
+    const section = await prisma.section.findFirst({
+      where: {
+        id: parsedSectionId,
+        instructorSubject: {
+          instructorId: parseInt(session.user.id)
         }
       }
     });
 
     if (!section) {
-      return new NextResponse('Section not found', { status: 404 });
+      return NextResponse.json(
+        { error: 'Section not found or access denied' },
+        { status: 403 }
+      );
     }
 
-    if (section.instructorSubjectInstructorId !== parseInt(session.user.id)) {
-      return new NextResponse('Forbidden', { status: 403 });
-    }
+    // Then get all students in this section with their details
+    const enrolledStudents = await prisma.studentSection.findMany({
+      where: {
+        sectionId: parsedSectionId
+      },
+      include: {
+        student: true
+      }
+    });
 
-    // Return just the student data
-    const students = section.students.map(s => s.student);
+    // Map to return only the student data
+    const students = enrolledStudents.map(enrollment => ({
+      id: enrollment.student.id,
+      studentNumber: enrollment.student.studentNumber,
+      firstName: enrollment.student.firstName,
+      middleName: enrollment.student.middleName,
+      lastName: enrollment.student.lastName,
+      extensionName: enrollment.student.extensionName
+    }));
+
     return NextResponse.json(students);
   } catch (error) {
     console.error('Error fetching section students:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal Server Error' },
+      { status: 500 }
+    );
   }
 }
 
 export async function POST(
-  request: Request,
+  req: Request,
   context: { params: { sectionId: string } }
 ) {
-  // Get sectionId from context.params
-  const sectionId = parseInt(context.params.sectionId);
-  if (isNaN(sectionId)) {
-    return new NextResponse('Invalid section ID', { status: 400 });
-  }
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
-      return new NextResponse('Unauthorized', { status: 401 });
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
     }
 
-    const body = await request.json();
-    const { studentId } = body;
-    if (!studentId) {
-      return new NextResponse('Student ID is required', { status: 400 });
+    const { studentId } = await req.json();
+    const { sectionId } = context.params;
+
+    if (!studentId || !sectionId) {
+      return NextResponse.json(
+        { error: 'Student ID and Section ID are required' },
+        { status: 400 }
+      );
     }
 
-    // Verify the section exists and belongs to the instructor
-    const section = await prisma.section.findUnique({
-      where: { id: sectionId },
+    const parsedStudentId = parseInt(studentId);
+    const parsedSectionId = parseInt(sectionId);
+
+    if (isNaN(parsedStudentId) || isNaN(parsedSectionId)) {
+      return NextResponse.json(
+        { error: 'Invalid student or section ID' },
+        { status: 400 }
+      );
+    }
+
+    // Verify the instructor has access to this section
+    const section = await prisma.section.findFirst({
+      where: {
+        id: parsedSectionId,
+        instructorSubject: {
+          instructorId: parseInt(session.user.id)
+        }
+      }
     });
 
     if (!section) {
-      return new NextResponse('Section not found', { status: 404 });
+      return NextResponse.json(
+        { error: 'Section not found or access denied' },
+        { status: 403 }
+      );
     }
 
-    if (section.instructorSubjectInstructorId !== parseInt(session.user.id)) {
-      return new NextResponse('Forbidden', { status: 403 });
-    }
-
-    // Check if student exists
-    const student = await prisma.student.findUnique({
-      where: { id: studentId },
-    });
-
-    if (!student) {
-      return new NextResponse('Student not found', { status: 404 });
-    }
-
-    // Check if student is already in this section
-    const existingEnrollment = await prisma.studentSection.findUnique({
+    // Check if student is already enrolled in this section
+    const existingEnrollment = await prisma.studentSection.findFirst({
       where: {
-        sectionId_studentId: {
-          sectionId: sectionId,
-          studentId: student.id,
-        },
-      },
+        studentId: parsedStudentId,
+        sectionId: parsedSectionId
+      }
     });
 
     if (existingEnrollment) {
-      return new NextResponse('Student is already in this section', { status: 400 });
+      return NextResponse.json(
+        { error: 'Student is already enrolled in this section' },
+        { status: 400 }
+      );
     }
 
-    // Add student to section
-    await prisma.studentSection.create({
+    // Create the enrollment
+    const enrollment = await prisma.studentSection.create({
       data: {
-        sectionId: parseInt(sectionId),
-        studentId: student.id,
+        studentId: parsedStudentId,
+        sectionId: parsedSectionId
       },
+      include: {
+        student: true
+      }
     });
 
-    return new NextResponse(null, { status: 201 });
+    return NextResponse.json({
+      id: enrollment.student.id,
+      studentNumber: enrollment.student.studentNumber,
+      firstName: enrollment.student.firstName,
+      middleName: enrollment.student.middleName,
+      lastName: enrollment.student.lastName,
+      extensionName: enrollment.student.extensionName
+    });
   } catch (error) {
     console.error('Error adding student to section:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal Server Error' },
+      { status: 500 }
+    );
   }
 }

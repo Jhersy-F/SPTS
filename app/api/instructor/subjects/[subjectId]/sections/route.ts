@@ -7,17 +7,55 @@ export async function GET(
   req: Request,
   context: { params: { subjectId: string } }
 ) {
-  const { subjectId } = await Promise.resolve(context.params);
   try {
+    const { subjectId } = await Promise.resolve(context.params);
+    
     const session = await getServerSession(authOptions);
     if (!session?.user) {
-      return new NextResponse('Unauthorized', { status: 401 });
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    // Convert IDs to numbers and validate them
+    const parsedSubjectId = Number(subjectId);
+    const parsedInstructorId = Number(session.user.id);
+
+    if (!Number.isInteger(parsedSubjectId) || parsedSubjectId <= 0) {
+      return NextResponse.json(
+        { error: 'Invalid subject ID format' },
+        { status: 400 }
+      );
+    }
+
+    if (!session.user.id) {
+      return NextResponse.json(
+        { error: 'Invalid session: missing instructor ID' },
+        { status: 401 }
+      );
+    }
+
+    // Find matching InstructorSubject record
+    const instructorSubject = await prisma.instructorSubject.findFirst({
+      where: {
+        instructorId: parsedInstructorId,
+        subject: {
+          subjectID: parsedSubjectId // Use the correct field name from the schema
+        }
+      }
+    });
+
+    if (!instructorSubject) {
+      return NextResponse.json(
+        { error: 'Subject not found or not assigned to instructor' },
+        { status: 404 }
+      );
     }
 
     const sections = await prisma.section.findMany({
       where: {
-        instructorSubjectInstructorId: parseInt(session.user.id),
-        instructorSubjectSubjectId: parseInt(subjectId),
+        instructorSubjectId: instructorSubject.id
       },
       include: {
         _count: {
@@ -45,36 +83,70 @@ export async function POST(
   req: Request,
   context: { params: { subjectId: string } }
 ) {
-  const { subjectId } = await Promise.resolve(context.params);
   try {
+    // First await the params
+    const { subjectId } = await Promise.resolve(context.params);
+    
     const session = await getServerSession(authOptions);
     if (!session?.user) {
-      return new NextResponse('Unauthorized', { status: 401 });
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
     }
 
     const { name } = await req.json();
-    if (!name) {
-      return new NextResponse('Section name is required', { status: 400 });
+    if (!name?.trim()) {
+      return NextResponse.json(
+        { error: 'Section name is required' },
+        { status: 400 }
+      );
     }
 
-    // Check if section already exists for this instructor and subject
+    const parsedSubjectId = parseInt(subjectId);
+    const parsedInstructorId = parseInt(session.user.id);
+
+    if (isNaN(parsedSubjectId) || isNaN(parsedInstructorId)) {
+      return NextResponse.json(
+        { error: 'Invalid subject ID or instructor ID' },
+        { status: 400 }
+      );
+    }
+
+    // Get the InstructorSubject record
+    const instructorSubject = await prisma.instructorSubject.findFirst({
+      where: {
+        instructorId: parsedInstructorId,
+        subjectId: parsedSubjectId
+      }
+    });
+
+    if (!instructorSubject) {
+      return NextResponse.json(
+        { error: 'Subject not found or not assigned to instructor' },
+        { status: 404 }
+      );
+    }
+
+    // Check if section already exists
     const existingSection = await prisma.section.findFirst({
       where: {
         name,
-        instructorSubjectInstructorId: parseInt(session.user.id),
-        instructorSubjectSubjectId: parseInt(subjectId),
+        instructorSubjectId: instructorSubject.id
       },
     });
 
     if (existingSection) {
-      return new NextResponse('Section with this name already exists', { status: 400 });
+      return NextResponse.json(
+        { error: 'Section with this name already exists' },
+        { status: 400 }
+      );
     }
 
-const section = await prisma.section.create({
+    const section = await prisma.section.create({
       data: {
         name,
-        instructorSubjectInstructorId: parseInt(session.user.id),
-        instructorSubjectSubjectId: parseInt(subjectId),
+        instructorSubjectId: instructorSubject.id
       },
     });
 

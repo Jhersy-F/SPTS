@@ -18,8 +18,12 @@ export async function PUT(
     const { title, semester, year } = await req.json();
 
     // Validate required fields
-    if (!title || !semester || !year) {
+    if (!title || !semester) {
       return new NextResponse('Missing required fields', { status: 400 });
+    }
+    
+    if (!year || typeof year !== 'string' || year.trim() === '') {
+      return new NextResponse('Year is required and must be a non-empty string', { status: 400 });
     }
 
     // Check if the subject exists and belongs to the instructor
@@ -37,14 +41,11 @@ export async function PUT(
     // Update the instructor's subject assignment with semester and year
     const updatedInstructorSubject = await prisma.instructorSubject.update({
       where: {
-        instructorId_subjectId: {
-          instructorId: parseInt(session.user.id),
-          subjectId: parseInt(subjectId),
-        },
+        id: instructorSubject.id, // Use the primary key id instead of compound key
       },
       data: {
         semester,
-        year: parseInt(year),
+        year: year,
         subject: {
           update: {
             title,

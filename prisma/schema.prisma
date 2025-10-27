@@ -61,7 +61,7 @@ model InstructorSubject {
   subject      Subject    @relation(fields: [subjectId], references: [subjectID])
   subjectId    Int
   semester     String     @db.VarChar(50)
-  year         Int
+  year         String     @db.VarChar(50)
   assignedAt   DateTime   @default(now())
   sections     Section[]
 }

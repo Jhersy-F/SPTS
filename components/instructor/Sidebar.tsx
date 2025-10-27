@@ -7,9 +7,9 @@ import { signOut } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 
 const nav = [
-  { href: '/instructor/dashboard', label: 'Home' },
-  { href: '/instructor/subjects', label: 'My Subjects' },
-  { href: '/instructor/profile', label: 'Profile' },
+  { key: 'home', href: '/instructor/dashboard', label: 'Home' },
+  { key: 'subjects', href: '/instructor/subjects', label: 'My Subjects' },
+  { key: 'profile', href: '/instructor/profile', label: 'Profile' },
 ];
 
 export default function Sidebar() {
@@ -30,8 +30,9 @@ export default function Sidebar() {
           const active = pathname === item.href;
           return (
             <Link
-              key={item.href}
+              key={item.key}
               href={item.href}
+              prefetch={true}
               className={
                 'w-full text-center rounded-lg px-4 py-3 text-white ' +
                 (active ? 'primary-gradient' : 'bg-transparent hover:bg-white/10')

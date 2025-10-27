@@ -2,12 +2,24 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { 
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Pencil, Trash2, Users } from 'lucide-react';
 
+// Types
 interface Subject {
-  subjectId: number;
+  id: number;  // InstructorSubject id
+  subjectId: number; // Using number consistently
   title: string;
   semester: string;
-  year: number;
+  year: string;
 }
 
 interface Section {
@@ -32,29 +44,29 @@ export default function InstructorSubjectsPage() {
   const [editSubjectData, setEditSubjectData] = useState<{
     title: string;
     semester: string;
-    year: number;
-  }>({ title: '', semester: '1st Semester', year: new Date().getFullYear() });
-  const [activeSubjectId, setActiveSubjectId] = useState<number | null>(null);
+    year: string;
+  }>({ title: '', semester: '1st Semester', year: new Date().getFullYear().toString() });
+  const [activeSubjectId, setActiveSubjectId] = useState<{id: number, subjectId: number} | null>(null);
 
-  const fetchSections = useCallback(async (subjectId: number) => {
+  const fetchSections = useCallback(async (subject: Subject) => {
+    if (!subject?.subjectId) {
+      console.warn('Skipping sections fetch - no subject ID provided');
+      return;
+    }
+
     try {
-      const res = await fetch(`/api/instructor/subjects/${subjectId}/sections`);
+      const res = await fetch(`/api/instructor/subjects/${subject.subjectId}/sections`);
+      const data = await res.json();
       
       if (!res.ok) {
-        const errorText = await res.text();
-        console.error('Failed to fetch sections:', errorText);
+        console.error('Failed to fetch sections:', data.error || 'Unknown error');
         return;
       }
       
-      try {
-        const sectionsData = await res.json();
-        setSections((prev: Record<number, Section[]>) => ({
-          ...prev,
-          [subjectId]: sectionsData
-        }));
-      } catch (jsonError) {
-        console.error('Error parsing sections JSON:', jsonError);
-      }
+      setSections((prev: Record<number, Section[]>) => ({
+        ...prev,
+        [subject.id]: data
+      }));
     } catch (error) {
       console.error('Error fetching sections:', error);
     }
@@ -108,18 +120,19 @@ export default function InstructorSubjectsPage() {
 
       const data = await res.json();
       const formattedSubjects = Array.isArray(data) ? data.map(subj => ({
+        id: subj.id,
         subjectId: subj.subjectId || subj.subjectID,
         title: subj.title,
         semester: subj.semester || '1st Semester',
-        year: subj.year || new Date().getFullYear()
+        year: subj.year || new Date().getFullYear().toString()
       })) : [];
-      
+      console.log(formattedSubjects);
       setSubjects(formattedSubjects);
       
       // Set the first subject as active by default if none selected
       if (formattedSubjects.length > 0 && !activeSubjectId) {
         setActiveSubjectId(formattedSubjects[0].subjectId);
-        fetchSections(formattedSubjects[0].subjectId);
+        fetchSections(formattedSubjects[0].id);
       }
     } catch (error) {
       console.error('Error fetching subjects:', error);
@@ -161,68 +174,105 @@ export default function InstructorSubjectsPage() {
   }, [fetchMySubjects, editSubjectData]);
 
 
-  const handleAddSection = async (subjectId: number) => {
+  const handleAddSection = async (subject: Subject) => {
     if (!newSectionName.trim()) return;
-    
+
     try {
-      const response = await fetch(`/api/instructor/subjects/${subjectId}/sections`, {
+      const response = await fetch(`/api/instructor/subjects/${subject.subjectId}/sections`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newSectionName }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: newSectionName.trim(),
+        }),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to add section');
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to add section');
       }
+
+        const newSection = await response.json();
       
+      // Update sections state
+      setSections(prev => ({
+        ...prev,
+        [subject.id]: [...(prev[subject.id] || []), newSection]
+      }));
+      
+      // Reset form
       setNewSectionName('');
       setIsAddingSection(false);
-      await fetchSections(subjectId);
     } catch (error) {
       console.error('Error adding section:', error);
       setError(error instanceof Error ? error.message : 'Failed to add section');
     }
   };
 
-  const handleDeleteSection = async (sectionId: number, subjectId: number) => {
+  const handleDeleteSection = async (sectionId: number, subject: Subject) => {
     if (!confirm('Are you sure you want to delete this section? This action cannot be undone.')) return;
     
     try {
-      const response = await fetch(`/api/instructor/sections/${sectionId}`, {
+      const response = await fetch(`/api/instructor/subjects/${subject.subjectId}/sections/${sectionId}`, {
         method: 'DELETE',
       });
 
       if (!response.ok) {
-        throw new Error('Failed to delete section');
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to delete section');
       }
       
-      await fetchSections(subjectId);
+      await fetchSections(subject);
     } catch (error) {
       console.error('Error deleting section:', error);
-      setError('Failed to delete section');
+      setError(error instanceof Error ? error.message : 'Failed to delete section');
     }
   };
 
-  const handleSubjectClick = (subjectId: number) => {
-    setActiveSubjectId(activeSubjectId === subjectId ? null : subjectId);
-    if (activeSubjectId !== subjectId) {
-      fetchSections(subjectId);
+  const handleSubjectClick = useCallback((subject: Subject) => {
+    if (!subject?.id || !subject?.subjectId) {
+      console.warn('Invalid subject clicked');
+      return;
     }
-  };
+
+    // If any subject is being edited, don't allow expanding sections
+    if (isEditingSubject !== null) {
+      return;
+    }
+
+    // If clicking the same subject, toggle its sections off
+    if (activeSubjectId?.id === subject.id && activeSubjectId?.subjectId === subject.subjectId) {
+      setActiveSubjectId(null);
+      setIsAddingSection(false); // Reset section adding state when closing
+    } else {
+      // If clicking a different subject, show its sections and hide others
+      setActiveSubjectId({ id: subject.id, subjectId: subject.subjectId });
+      setIsAddingSection(false); // Reset section adding state
+      
+      // Only fetch if we don't already have the sections
+      if (!sections[subject.id]) {
+        fetchSections(subject);
+      }
+    }
+  }, [activeSubjectId, sections, fetchSections, isEditingSubject]);
 
   const handleEditSubject = (subject: Subject) => {
-    setIsEditingSubject(subject.subjectId);
+    setIsEditingSubject(subject.id); // Use the instructor subject ID instead of subject ID
     setEditSubjectData({
       title: subject.title,
       semester: subject.semester,
       year: subject.year
     });
+    // Close sections panel if it's open
+    if (activeSubjectId?.id === subject.id) {
+      setActiveSubjectId(null);
+    }
   };
 
-  const handleUpdateSubject = async (subjectId: number) => {
+  const handleUpdateSubject = async (instructorSubjectId: number, subjectId: number) => {
     try {
-      const response = await fetch(`/api/instructor/subjects/${subjectId}`, {
+      const response = await fetch(`/api/instructor/subjects/${instructorSubjectId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editSubjectData),
@@ -236,7 +286,7 @@ export default function InstructorSubjectsPage() {
       // Update the local state immediately for better UX
       setSubjects(prevSubjects => 
         prevSubjects.map(subject => 
-          subject.subjectId === subjectId 
+          subject.id === instructorSubjectId // Match by instructor subject ID
             ? { 
                 ...subject, 
                 semester: editSubjectData.semester, 
@@ -253,7 +303,7 @@ export default function InstructorSubjectsPage() {
     }
   };
 
-  const handleDeleteSubject = async (subjectId: number) => {
+  const handleDeleteSubject = async (instructorSubjectId: number, subjectId: number) => {
     if (!confirm('Are you sure you want to delete this subject? This will also delete all sections and student enrollments for this subject.')) return;
     
     try {
@@ -265,7 +315,7 @@ export default function InstructorSubjectsPage() {
       
       await fetchMySubjects();
       // Reset active subject if it was deleted
-      if (activeSubjectId === subjectId) {
+      if (activeSubjectId?.id === instructorSubjectId) {
         setActiveSubjectId(null);
       }
       setIsEditingSubject(null);
@@ -299,7 +349,7 @@ export default function InstructorSubjectsPage() {
 
 
 
-  const filteredSubjects = subjects.filter((subject) => {
+  const filteredSubjects = subjects.filter(subject => {
     const q = query.trim().toLowerCase();
     if (!q) return true;
     return (
@@ -309,12 +359,10 @@ export default function InstructorSubjectsPage() {
     );
   });
 
-  const currentSections = activeSubjectId ? sections[activeSubjectId] || [] : [];
-
   return (
     <div className="p-4 bg-gray-50 min-h-screen">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
+      <div className="max-w-7xl mx-auto space-y-6">
+        <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold text-gray-900">My Subjects</h1>
           
           {/* Add Subject Form */}
@@ -343,12 +391,11 @@ export default function InstructorSubjectsPage() {
               <option value="Summer">Summer</option>
             </select>
             <input
-              type="number"
+              type="text"
               value={editSubjectData.year}
-              onChange={(e) => setEditSubjectData({ ...editSubjectData, year: parseInt(e.target.value) })}
+              onChange={(e) => setEditSubjectData({ ...editSubjectData, year: e.target.value })}
               className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-24"
-              min={2000}
-              max={9999}
+              placeholder="Year"
             />
             <button
               onClick={() => selectedSubjectId && handleAddSubject(parseInt(selectedSubjectId))}
@@ -394,219 +441,243 @@ export default function InstructorSubjectsPage() {
           </div>
         </div>
 
-        {/* Subjects List */}
-        <div className="bg-white shadow overflow-hidden sm:rounded-md">
-          {filteredSubjects.length === 0 ? (
-            <div className="text-center py-12 text-gray-500">
-              {query ? 'No subjects match your search.' : 'No subjects found. Add a subject to get started.'}
-            </div>
-          ) : (
-            <ul className="divide-y divide-gray-200">
-              {filteredSubjects.map((subject) => (
-                <li key={`subject-${subject.subjectId}`} className="hover:bg-gray-50">
-                  <div 
-                    className="px-4 py-4 sm:px-6 cursor-pointer"
-                    onClick={() => handleSubjectClick(subject.subjectId)}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        {isEditingSubject === subject.subjectId ? (
-                          <div className="flex flex-col space-y-3 w-full">
-                            <input
-                              type="text"
-                              value={editSubjectData.title}
-                              readOnly
-                              className="block w-full px-4 py-2.5 border border-gray-300 bg-gray-100 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-base rounded-sm cursor-not-allowed"
-                              style={{ minWidth: '400px' }}
-                            />
-                            <div className="flex space-x-3 items-center">
-                              <select
-                                value={editSubjectData.semester}
-                                onChange={(e) => setEditSubjectData({...editSubjectData, semester: e.target.value})}
-                                className="block px-4 py-2.5 border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-base rounded-sm"
-                                style={{ minWidth: '180px' }}
-                              >
-                                <option value="1st Semester">1st Semester</option>
-                                <option value="2nd Semester">2nd Semester</option>
-                                <option value="Summer">Summer</option>
-                              </select>
-                              <input
-                                type="number"
-                                value={editSubjectData.year}
-                                onChange={(e) => setEditSubjectData({...editSubjectData, year: parseInt(e.target.value)})}
-                                className="block px-4 py-2.5 border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-base rounded-sm"
-                                style={{ width: '120px' }}
-                              />
-                            </div>
-                          </div>
-                        ) : (
-                          <>
-                            <div className="text-lg font-medium text-blue-600 truncate">
-                              {subject.title}
-                            </div>
-                            <div className="ml-2 flex-shrink-0 flex">
-                              <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                                {subject.semester} {subject.year}
-                              </span>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                      <div className="ml-2 flex-shrink-0 flex">
-                        {isEditingSubject === subject.subjectId ? (
-                          <>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleUpdateSubject(subject.subjectId);
-                              }}
-                              className="text-green-600 hover:text-green-900 mr-2"
-                              title="Save changes"
-                            >
-                              <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                              </svg>
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleCancelEdit();
-                              }}
-                              className="text-gray-600 hover:text-gray-900 mr-2"
-                              title="Cancel"
-                            >
-                              <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                              </svg>
-                            </button>
-                          </>
-                        ) : (
-                          <>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleEditSubject(subject);
-                              }}
-                              className="text-blue-600 hover:text-blue-900 mr-2"
-                              title="Edit subject"
-                            >
-                              <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                              </svg>
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteSubject(subject.subjectId);
-                              }}
-                              className="text-red-600 hover:text-red-900 mr-2"
-                              title="Delete subject"
-                            >
-                              <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                              </svg>
-                            </button>
-                          </>
-                        )}
-                        <svg
-                          className={`h-5 w-5 text-gray-400 transform transition-transform ${activeSubjectId === subject.subjectId ? 'rotate-180' : ''}`}
-                          xmlns="http://www.w3.org/2000/svg"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
+        {/* Subjects Table */}
+        <div className="bg-white shadow-md rounded-lg overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Subject</TableHead>
+                <TableHead>Semester</TableHead>
+                <TableHead>Year</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredSubjects.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center text-gray-500 py-4">
+                    {query ? 'No subjects match your search.' : 'No subjects found. Add a subject to get started.'}
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredSubjects.map((subject) => (
+                  <TableRow key={`subject-${subject.id}`} className="hover:bg-gray-50">
+                    <TableCell>
+                      <span className="font-medium text-blue-600">{subject.title}</span>
+                    </TableCell>
+                    <TableCell>
+                      {isEditingSubject === subject.id ? (
+                        <select
+                          value={editSubjectData.semester}
+                          onChange={(e) => setEditSubjectData({...editSubjectData, semester: e.target.value})}
+                          className="w-full px-2 py-1 border border-gray-300 rounded-sm bg-white"
+                          autoFocus
                         >
-                          <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                        </svg>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Sections Panel */}
-                  {activeSubjectId === subject.subjectId && (
-                    <div className="border-t border-gray-200 bg-gray-50 px-4 py-4 sm:px-6">
-                      <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-lg font-medium text-gray-900">Sections</h3>
-                        <button
-                          onClick={() => setIsAddingSection(!isAddingSection)}
-                          className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                        >
-                          {isAddingSection ? 'Cancel' : 'Add Section'}
-                        </button>
-                      </div>
-
-                      {/* Add Section Form */}
-                      {isAddingSection && (
-                        <div className="mb-4 p-4 bg-white rounded-md shadow-sm border border-gray-200">
-                          <div className="flex items-end space-x-2">
-                            <div className="flex-1">
-                              <label htmlFor="sectionName" className="block text-sm font-medium text-gray-700 mb-1">
-                                Section Name
-                              </label>
-                              <input
-                                type="text"
-                                id="sectionName"
-                                value={newSectionName}
-                                onChange={(e) => setNewSectionName(e.target.value)}
-                                className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                                placeholder="e.g., Section A"
-                              />
-                            </div>
-                            <button
-                              onClick={() => handleAddSection(subject.subjectId)}
-                              disabled={!newSectionName.trim()}
-                              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                            >
-                              Save Section
-                            </button>
-                          </div>
-                        </div>
+                          <option value="1st Semester">1st Semester</option>
+                          <option value="2nd Semester">2nd Semester</option>
+                          <option value="Summer">Summer</option>
+                        </select>
+                      ) : (
+                        <span>{subject.semester}</span>
                       )}
-
-                      {/* Sections List */}
-                      <div className="overflow-hidden bg-white shadow sm:rounded-md">
-                        <ul className="divide-y divide-gray-200">
-                          {currentSections.length > 0 ? (
-                            currentSections.map((section) => (
-                              <li key={`section-${section.id}`}>
-                                <div className="flex items-center justify-between px-4 py-4 sm:px-6">
-                                  <div className="flex items-center">
-                                    <div className="text-sm font-medium text-gray-900">{section.name}</div>
-                                    <div className="ml-2 flex-shrink-0 flex">
-                                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
-                                        {section._count.students} {section._count.students === 1 ? 'student' : 'students'}
-                                      </span>
-                                    </div>
-                                  </div>
-                                  <div className="flex space-x-4">
-                                    <Link
-                                      href={`/instructor/sections/${section.id}/students`}
-                                      className="text-blue-600 hover:text-blue-900"
-                                    >
-                                      View Students
-                                    </Link>
-                                    <button
-                                      onClick={() => handleDeleteSection(section.id, subject.subjectId)}
-                                      className="text-red-600 hover:text-red-900"
-                                    >
-                                      Delete
-                                    </button>
-                                  </div>
-                                </div>
-                              </li>
-                            ))
-                          ) : (
-                            <li className="px-4 py-4 text-center text-gray-500">
-                              No sections yet. Add a section to get started.
-                            </li>
-                          )}
-                        </ul>
-                      </div>
-                    </div>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
+                    </TableCell>
+                    <TableCell>
+                      {isEditingSubject === subject.id ? (
+                        <input
+                          type="text"
+                          value={editSubjectData.year}
+                          onChange={(e) => setEditSubjectData({...editSubjectData, year: e.target.value})}
+                          className="w-24 px-2 py-1 border border-gray-300 rounded-sm bg-white"
+                          placeholder="Year"
+                        />
+                      ) : (
+                        <span>{subject.year}</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right space-x-2">
+                      {isEditingSubject === subject.id ? (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleUpdateSubject(subject.id, subject.subjectId);
+                            }}
+                            className="bg-green-50 text-green-600 hover:bg-green-100"
+                          >
+                            Save
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCancelEdit();
+                            }}
+                            className="bg-red-50 text-red-600 hover:bg-red-100"
+                          >
+                            Cancel
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleSubjectClick(subject)}
+                            title="View sections"
+                          >
+                            <Users className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditSubject(subject);
+                            }}
+                            title="Edit subject"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteSubject(subject.id, subject.subjectId);
+                            }}
+                            className="text-red-600 hover:text-red-900"
+                            title="Delete subject"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
         </div>
+
+        {/* Sections Panel */}
+        {activeSubjectId !== null && (
+          <div className="mt-8 border-t border-gray-200 bg-gray-50 px-4 py-4 sm:px-6">
+            {/* Active Subject Header */}
+            {subjects.find(s => s.id === activeSubjectId.id) && (
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold text-gray-900">
+                  {subjects.find(s => s.id === activeSubjectId.id)?.title}
+                </h2>
+                <p className="text-sm text-gray-600 mt-1">
+                  {subjects.find(s => s.id === activeSubjectId.id)?.semester} • Year: {subjects.find(s => s.id === activeSubjectId.id)?.year}
+                </p>
+                <div className="h-0.5 bg-gray-200 mt-4"></div>
+              </div>
+            )}
+
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium text-gray-900">Sections</h3>
+              <Button
+                onClick={() => setIsAddingSection(!isAddingSection)}
+                variant={isAddingSection ? "outline" : "default"}
+              >
+                {isAddingSection ? 'Cancel' : 'Add Section'}
+              </Button>
+            </div>
+
+            {/* Add Section Form */}
+            {isAddingSection && (
+              <div className="mb-4 p-4 bg-white rounded-md shadow-sm border border-gray-200">
+                <div className="flex items-end space-x-2">
+                  <div className="flex-1">
+                    <label htmlFor="sectionName" className="block text-sm font-medium text-gray-700 mb-1">
+                      Section Name
+                    </label>
+                    <input
+                      type="text"
+                      id="sectionName"
+                      value={newSectionName}
+                      onChange={(e) => setNewSectionName(e.target.value)}
+                      className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                      placeholder="e.g., Section A"
+                    />
+                  </div>
+                  <Button
+                    onClick={() => {
+                      const subject = subjects.find(s => s.id === activeSubjectId?.id);
+                      if (subject) {
+                        handleAddSection(subject);
+                      }
+                    }}
+                    disabled={!newSectionName.trim()}
+                  >
+                    Save Section
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Sections Table */}
+            <div className="bg-white shadow-md rounded-lg overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Students</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {activeSubjectId && sections[activeSubjectId.id]?.length > 0 ? (
+                    sections[activeSubjectId.id].map((section) => (
+                      <TableRow key={`section-${section.id}`}>
+                        <TableCell>
+                          <span className="font-medium">{section.name}</span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+                            {section._count.students} {section._count.students === 1 ? 'student' : 'students'}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right space-x-2">
+                          <Link href={`/instructor/sections/${section.id}/students`}>
+                            <Button variant="ghost" size="sm">
+                              <Users className="mr-1 h-4 w-4" />
+                              View Students
+                            </Button>
+                          </Link>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              const subject = subjects.find(s => s.id === activeSubjectId.id);
+                              if (subject) {
+                                handleDeleteSection(section.id, subject);
+                              }
+                            }}
+                            className="text-red-600 hover:text-red-900"
+                          >
+                            Delete
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-center text-gray-500 py-4">
+                        No sections yet. Add a section to get started.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
