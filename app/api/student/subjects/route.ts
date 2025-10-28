@@ -7,8 +7,13 @@ export async function GET() {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
-      return new NextResponse('Unauthorized', { status: 401 });
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
     }
+
+    console.log('Fetching subjects for student:', session.user.id);
 
     // Get student's sections with subjects through StudentSection
     const student = await prisma.student.findUnique({
@@ -30,26 +35,41 @@ export async function GET() {
       }
     });
 
+    console.log('Found student:', student ? 'yes' : 'no');
+    console.log('Student sections count:', student?.sections?.length || 0);
+
     if (!student) {
-      return new NextResponse('Student not found', { status: 404 });
+      return NextResponse.json(
+        { error: 'Student not found' },
+        { status: 404 }
+      );
     }
 
     // Transform the data to match the expected format
-    const subjects = student.sections.map(({ section }) => ({
-      subjectId: section.instructorSubject.subject.subjectID.toString(),
-      title: section.instructorSubject.subject.title,
-      semester: section.instructorSubject.semester,
-      year: section.instructorSubject.year,
-    }));
+    // Filter out any sections that are null (orphaned records)
+    const subjects = student.sections
+      .filter(({ section }) => section !== null && section.instructorSubject !== null)
+      .map(({ section }) => ({
+        sectionId: section.id,
+        subjectId: section.instructorSubject.subject.subjectID.toString(),
+        title: section.instructorSubject.subject.title,
+        semester: section.instructorSubject.semester,
+        year: section.instructorSubject.year,
+      }));
+
+    console.log('Subjects found:', subjects.length);
 
     // Remove duplicates in case student is enrolled in multiple sections of the same subject
-    const uniqueSubjects = Array.from(
+    /*const uniqueSubjects = Array.from(
       new Map(subjects.map(item => [item.subjectId, item])).values()
-    );
+    );*/
 
-    return NextResponse.json(uniqueSubjects);
+    return NextResponse.json(subjects);
   } catch (error) {
     console.error('Error fetching student subjects:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal Server Error', details: error instanceof Error ? error.message : 'Unknown error' },
+      { status: 500 }
+    );
   }
 }

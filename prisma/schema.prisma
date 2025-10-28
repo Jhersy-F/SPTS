@@ -71,7 +71,6 @@ model Section {
   name              String             @db.VarChar(100)
   instructorSubject InstructorSubject  @relation(fields: [instructorSubjectId], references: [id])
   instructorSubjectId Int
-  students          StudentSection[]
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
   @@unique([instructorSubjectId, name])

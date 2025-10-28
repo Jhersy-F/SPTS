@@ -49,13 +49,14 @@ export default function InstructorSubjectsPage() {
   const [activeSubjectId, setActiveSubjectId] = useState<{id: number, subjectId: number} | null>(null);
 
   const fetchSections = useCallback(async (subject: Subject) => {
-    if (!subject?.subjectId) {
-      console.warn('Skipping sections fetch - no subject ID provided');
+    if (!subject?.id) {
+      console.warn('Skipping sections fetch - no instructor subject ID provided');
       return;
     }
 
     try {
-      const res = await fetch(`/api/instructor/subjects/${subject.subjectId}/sections`);
+      // Use subject.id (InstructorSubject.id) instead of subject.subjectId
+      const res = await fetch(`/api/instructor/subjects/${subject.id}/sections`);
       const data = await res.json();
       
       if (!res.ok) {
@@ -178,7 +179,8 @@ export default function InstructorSubjectsPage() {
     if (!newSectionName.trim()) return;
 
     try {
-      const response = await fetch(`/api/instructor/subjects/${subject.subjectId}/sections`, {
+      // Use subject.id (InstructorSubject.id) for the API call
+      const response = await fetch(`/api/instructor/subjects/${subject.id}/sections`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -214,7 +216,8 @@ export default function InstructorSubjectsPage() {
     if (!confirm('Are you sure you want to delete this section? This action cannot be undone.')) return;
     
     try {
-      const response = await fetch(`/api/instructor/subjects/${subject.subjectId}/sections/${sectionId}`, {
+      // Use subject.id (InstructorSubject.id) for the API call
+      const response = await fetch(`/api/instructor/subjects/${subject.id}/sections/${sectionId}`, {
         method: 'DELETE',
       });
 
@@ -270,7 +273,7 @@ export default function InstructorSubjectsPage() {
     }
   };
 
-  const handleUpdateSubject = async (instructorSubjectId: number, subjectId: number) => {
+  const handleUpdateSubject = async (instructorSubjectId: number) => {
     try {
       const response = await fetch(`/api/instructor/subjects/${instructorSubjectId}`, {
         method: 'PUT',
@@ -502,7 +505,7 @@ export default function InstructorSubjectsPage() {
                             size="sm"
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleUpdateSubject(subject.id, subject.subjectId);
+                              handleUpdateSubject(subject.id);
                             }}
                             className="bg-green-50 text-green-600 hover:bg-green-100"
                           >

@@ -12,30 +12,59 @@ export async function PUT(
     const session = await getServerSession(authOptions);
     
     if (!session?.user) {
-      return new NextResponse('Unauthorized', { status: 401 });
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
     }
 
     const { title, semester, year } = await req.json();
 
     // Validate required fields
     if (!title || !semester) {
-      return new NextResponse('Missing required fields', { status: 400 });
+      return NextResponse.json(
+        { error: 'Missing required fields' },
+        { status: 400 }
+      );
     }
     
     if (!year || typeof year !== 'string' || year.trim() === '') {
-      return new NextResponse('Year is required and must be a non-empty string', { status: 400 });
+      return NextResponse.json(
+        { error: 'Year is required and must be a non-empty string' },
+        { status: 400 }
+      );
     }
 
-    // Check if the subject exists and belongs to the instructor
+    // Parse the InstructorSubject ID from the route param
+    const instructorSubjectId = parseInt(subjectId);
+    const instructorId = parseInt(session.user.id);
+    
+    console.log('UPDATE: Looking for InstructorSubject with:', {
+      id: instructorSubjectId,
+      instructorId: instructorId
+    });
+
+    // Check if the InstructorSubject record exists and belongs to the instructor
     const instructorSubject = await prisma.instructorSubject.findFirst({
       where: {
-        instructorId: parseInt(session.user.id),
-        subjectId: parseInt(subjectId),
+        id: instructorSubjectId,
+        instructorId: instructorId,
       },
     });
 
+    console.log('UPDATE: Found InstructorSubject:', instructorSubject);
+
     if (!instructorSubject) {
-      return new NextResponse('Subject not found or access denied', { status: 404 });
+      return NextResponse.json(
+        { 
+          error: 'Subject not found or access denied',
+          debug: {
+            instructorSubjectId,
+            instructorId
+          }
+        },
+        { status: 404 }
+      );
     }
 
     // Update the instructor's subject assignment with semester and year
@@ -65,7 +94,10 @@ export async function PUT(
     });
   } catch (error) {
     console.error('Error updating subject:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal Server Error' },
+      { status: 500 }
+    );
   }
 }
 
@@ -78,44 +110,69 @@ export async function DELETE(
     const session = await getServerSession(authOptions);
     
     if (!session?.user) {
-      return new NextResponse('Unauthorized', { status: 401 });
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
     }
 
-    // Check if the subject exists and belongs to the instructor
+    // Parse the InstructorSubject ID from the route param
+    const instructorSubjectId = parseInt(subjectId);
+    const instructorId = parseInt(session.user.id);
+    
+    console.log('DELETE: Looking for InstructorSubject with:', {
+      id: instructorSubjectId,
+      instructorId: instructorId
+    });
+
+    // Check if the InstructorSubject record exists and belongs to the instructor
     const instructorSubject = await prisma.instructorSubject.findFirst({
       where: {
-        instructorId: parseInt(session.user.id),
-        subjectId: parseInt(subjectId),
+        id: instructorSubjectId,
+        instructorId: instructorId,
       },
     });
 
+    console.log('DELETE: Found InstructorSubject:', instructorSubject);
+
     if (!instructorSubject) {
-      return new NextResponse('Subject not found or access denied', { status: 404 });
+      return NextResponse.json(
+        { 
+          error: 'Subject not found or access denied',
+          debug: {
+            instructorSubjectId,
+            instructorId
+          }
+        },
+        { status: 404 }
+      );
     }
 
     // Delete the instructor-subject relationship
-    await prisma.instructorSubject.deleteMany({
+    await prisma.instructorSubject.delete({
       where: {
-        instructorId: parseInt(session.user.id),
-        subjectId: parseInt(subjectId),
+        id: instructorSubjectId,
       },
     });
 
     // Check if the subject is still used by any instructor
     const subjectUsage = await prisma.instructorSubject.count({
-      where: { subjectId: parseInt(subjectId) },
+      where: { subjectId: instructorSubject.subjectId },
     });
 
     // If no one is using this subject, delete it
     if (subjectUsage === 0) {
       await prisma.subject.delete({
-        where: { subjectID: parseInt(subjectId) },
+        where: { subjectID: instructorSubject.subjectId },
       });
     }
 
     return new NextResponse(null, { status: 204 });
   } catch (error) {
     console.error('Error deleting subject:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal Server Error' },
+      { status: 500 }
+    );
   }
 }

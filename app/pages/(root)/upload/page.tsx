@@ -6,27 +6,48 @@ import { useSession } from "next-auth/react";
 
 
 interface Subject {
+  sectionId: string;
   subjectId: string;
   title: string;
   semester: string;
-  year: number;
+  year: string; // Changed from number to string to match API response
 }
 
 export default function UploadPage() {
+  const { data: session, status } = useSession();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
 
   useEffect(() => {
+    // Wait for session to load
+    if (status === 'loading') {
+      return;
+    }
+    
+    if (!session?.user) {
+      setError('Please log in to view subjects');
+      setLoading(false);
+      return;
+    }
+
     const fetchSubjects = async () => {
       try {
+        console.log('Fetching student subjects...');
         const response = await fetch('/api/student/subjects');
+        console.log('Response status:', response.status);
+        
         if (!response.ok) {
-          throw new Error('Failed to fetch subjects');
+          const errorData = await response.json().catch(() => ({ error: response.statusText }));
+          console.error('Failed to fetch subjects:', errorData);
+          throw new Error(errorData.error || 'Failed to fetch subjects');
         }
+        
         const data = await response.json();
+        console.log('Subjects data:', data);
         setSubjects(data);
       } catch (err) {
+        console.error('Fetch error:', err);
         setError(err instanceof Error ? err.message : 'Failed to load subjects');
       } finally {
         setLoading(false);
@@ -34,7 +55,7 @@ export default function UploadPage() {
     };
 
     fetchSubjects();
-  }, []);
+  }, [session, status]);
 
   if (loading) {
     return (
@@ -106,7 +127,7 @@ export default function UploadPage() {
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
                         {subjects.map((subject) => (
-                          <tr key={subject.subjectId} className="hover:bg-gray-50">
+                          <tr key={subject.sectionId} className="hover:bg-gray-50">
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="text-sm font-medium text-gray-900">{subject.title}</div>
                             </td>

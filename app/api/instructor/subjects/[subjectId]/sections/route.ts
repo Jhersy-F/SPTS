@@ -18,13 +18,13 @@ export async function GET(
       );
     }
 
-    // Convert IDs to numbers and validate them
-    const parsedSubjectId = Number(subjectId);
-    const parsedInstructorId = Number(session.user.id);
+    // The subjectId param is actually the InstructorSubject.id
+    const instructorSubjectId = Number(subjectId);
+    const instructorId = Number(session.user.id);
 
-    if (!Number.isInteger(parsedSubjectId) || parsedSubjectId <= 0) {
+    if (!Number.isInteger(instructorSubjectId) || instructorSubjectId <= 0) {
       return NextResponse.json(
-        { error: 'Invalid subject ID format' },
+        { error: 'Invalid instructor subject ID format' },
         { status: 400 }
       );
     }
@@ -36,15 +36,20 @@ export async function GET(
       );
     }
 
-    // Find matching InstructorSubject record
+    console.log('GET Sections: Looking for InstructorSubject with:', {
+      id: instructorSubjectId,
+      instructorId: instructorId
+    });
+
+    // Verify the InstructorSubject record exists and belongs to this instructor
     const instructorSubject = await prisma.instructorSubject.findFirst({
       where: {
-        instructorId: parsedInstructorId,
-        subject: {
-          subjectID: parsedSubjectId // Use the correct field name from the schema
-        }
+        id: instructorSubjectId,
+        instructorId: instructorId
       }
     });
+
+    console.log('GET Sections: Found InstructorSubject:', instructorSubject);
 
     if (!instructorSubject) {
       return NextResponse.json(
@@ -53,6 +58,7 @@ export async function GET(
       );
     }
 
+    // Get all sections for this InstructorSubject
     const sections = await prisma.section.findMany({
       where: {
         instructorSubjectId: instructorSubject.id
@@ -103,23 +109,31 @@ export async function POST(
       );
     }
 
-    const parsedSubjectId = parseInt(subjectId);
-    const parsedInstructorId = parseInt(session.user.id);
+    // The subjectId param is actually the InstructorSubject.id
+    const instructorSubjectId = parseInt(subjectId);
+    const instructorId = parseInt(session.user.id);
 
-    if (isNaN(parsedSubjectId) || isNaN(parsedInstructorId)) {
+    if (isNaN(instructorSubjectId) || isNaN(instructorId)) {
       return NextResponse.json(
-        { error: 'Invalid subject ID or instructor ID' },
+        { error: 'Invalid instructor subject ID or instructor ID' },
         { status: 400 }
       );
     }
 
-    // Get the InstructorSubject record
+    console.log('POST Section: Looking for InstructorSubject with:', {
+      id: instructorSubjectId,
+      instructorId: instructorId
+    });
+
+    // Verify the InstructorSubject record exists and belongs to this instructor
     const instructorSubject = await prisma.instructorSubject.findFirst({
       where: {
-        instructorId: parsedInstructorId,
-        subjectId: parsedSubjectId
+        id: instructorSubjectId,
+        instructorId: instructorId
       }
     });
+
+    console.log('POST Section: Found InstructorSubject:', instructorSubject);
 
     if (!instructorSubject) {
       return NextResponse.json(
@@ -148,6 +162,11 @@ export async function POST(
         name,
         instructorSubjectId: instructorSubject.id
       },
+      include: {
+        _count: {
+          select: { students: true }
+        }
+      }
     });
 
     return NextResponse.json(section);
