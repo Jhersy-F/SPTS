@@ -99,13 +99,9 @@ export default function SectionStudentsPage() {
                     <TableRow key={student.id}>
                       <TableCell className="w-1/3">
                         <div className="font-medium">
-                          {student.firstName} {student.lastName}
+                          {student.firstName} {student.middleName} {student.lastName}
                         </div>
-                        {student.middleName && (
-                          <div className="text-sm text-muted-foreground">
-                            {student.middleName}
-                          </div>
-                        )}
+                       
                       </TableCell>
                       <TableCell className="w-1/3 font-mono">
                         {student.studentNumber}

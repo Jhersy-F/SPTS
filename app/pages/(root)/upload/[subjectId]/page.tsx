@@ -248,7 +248,7 @@ const Upload = () => {
               <tr><td colSpan={7} className="px-6 py-4 text-sm text-gray-700">Loading...</td></tr>
             )}
             {!!error && (
-              <tr><td colSpan={7} className="px-6 py-4 text-sm text-red-600">{error}</td></tr>
+              <tr><td colSpan={7} className="px-6 py-4 text-sm ">No uploads found</td></tr>
             )}
             {filteredUploads.map((u) => (
               <tr key={u.id} className="hover:bg-gray-50">

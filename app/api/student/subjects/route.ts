@@ -51,14 +51,15 @@ export async function GET() {
       .filter(({ section }) => section !== null && section.instructorSubject !== null)
       .map(({ section }) => ({
         sectionId: section.id,
-        subjectId: section.instructorSubject.subject.subjectID.toString(),
+        subjectId: section.instructorSubject.id.toString(),
         title: section.instructorSubject.subject.title,
         semester: section.instructorSubject.semester,
         year: section.instructorSubject.year,
       }));
 
     console.log('Subjects found:', subjects.length);
-
+    console.log('section data:', student.sections[0].section.instructorSubject);
+     console.log('section data:', student.sections[1].section.instructorSubject);
     // Remove duplicates in case student is enrolled in multiple sections of the same subject
     /*const uniqueSubjects = Array.from(
       new Map(subjects.map(item => [item.subjectId, item])).values()
