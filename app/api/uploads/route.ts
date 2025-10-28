@@ -22,8 +22,9 @@ export async function GET(request: Request) {
     const subjectId = searchParams.get('subjectId');
     const studentId = searchParams.get('studentId');
     
-    // Build the where clause
-    const whereClause: any = {};
+  // Build the where clause
+  // Use a generic record type to avoid overly broad `any` while allowing flexible filters
+  const whereClause: Record<string, unknown> = {};
     
     // If studentId is provided (instructor viewing student's uploads)
     if (studentId && !isNaN(Number(studentId))) {
@@ -49,7 +50,9 @@ export async function GET(request: Request) {
 
     const uploadsRaw = await prisma.upload.findMany({
       where: whereClause,
-      orderBy: { createdAt: 'desc' },
+      // Prisma model `Upload` does not have a `createdAt` field in schema.prisma.
+      // Order by `id` (autoincrement) as a stable fallback (newer uploads have larger ids).
+      orderBy: { id: 'desc' },
       include: {
         instructor: { select: { firstName: true, lastName: true } },
         subject: { select: { title: true, subjectID: true } },
@@ -66,10 +69,13 @@ export async function GET(request: Request) {
       subjectID: upload.subject?.subjectID ?? null,
       instructor: upload.instructor ? 
         `${upload.instructor.firstName} ${upload.instructor.lastName}` : '-',
-      createdAt: upload['createdAt'] // Include the createdAt field
+  // The Prisma `Upload` model currently has no `createdAt` timestamp.
+  // Return null for `createdAt` so the frontend receives a consistent shape.
+  createdAt: (upload as { createdAt?: string | Date }).createdAt ?? null,
     }));
 
-    return NextResponse.json(responseUploads);
+  // Return an object with `uploads` so client code that expects `data.uploads` works
+  return NextResponse.json({ uploads: responseUploads });
   } catch (error) {
     console.error('List uploads error:', error);
     return NextResponse.json(
