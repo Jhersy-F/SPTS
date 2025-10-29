@@ -135,7 +135,7 @@ export default function UploadPage() {
                               <div className="text-sm text-gray-900">{subject.semester}</div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-900">{subject.subjectId}</div>
+                              <div className="text-sm text-gray-900">{subject.year}</div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                               <Link 
