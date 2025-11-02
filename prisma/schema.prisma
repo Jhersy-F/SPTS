@@ -73,6 +73,7 @@ model Section {
   instructorSubjectId Int
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
+  students          StudentSection[]
   @@unique([instructorSubjectId, name])
 }
 

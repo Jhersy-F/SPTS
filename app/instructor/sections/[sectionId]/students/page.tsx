@@ -13,7 +13,7 @@ import Link from 'next/link';
 export default function SectionStudentsPage() {
   const { sectionId } = useParams();
   const [students, setStudents] = useState<Student[]>([]);
-  const [section, setSection] = useState<{instructorSubjectSubjectId?: number} | null>(null);
+  const [section, setSection] = useState<{instructorSubjectId?: number} | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
@@ -26,7 +26,9 @@ export default function SectionStudentsPage() {
         const sectionRes = await fetch(`/api/instructor/sections/${sectionId}`);
         if (!sectionRes.ok) throw new Error('Failed to fetch section details');
         const sectionData = await sectionRes.json();
+        
         setSection(sectionData);
+        
 
         // Then fetch students
         const studentsRes = await fetch(`/api/instructor/sections/${sectionId}/students`);
@@ -108,7 +110,7 @@ export default function SectionStudentsPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <Button variant="ghost" size="sm" asChild>
-                          <Link href={`/instructor/students/${student.id}/uploads?subjectid=${section?.instructorSubjectSubjectId || ''}`}>
+                          <Link href={`/instructor/students/${student.id}/uploads?subjectid=${section?.instructorSubjectId || ''}`}>
                             View Uploads
                           </Link>
                         </Button>

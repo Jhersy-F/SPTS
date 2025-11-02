@@ -50,7 +50,7 @@ export async function GET(
         { status: 404 }
       );
     }
-
+    console.log('Fetched section:', section); 
     return NextResponse.json({
       id: section.id,
       name: section.name,

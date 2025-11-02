@@ -16,7 +16,8 @@ export async function GET(
       );
     }
 
-    const { sectionId } = context.params;
+    const { sectionId } = (await context.params) as { sectionId: string };
+    
     const parsedSectionId = parseInt(sectionId);
     
     if (isNaN(parsedSectionId)) {
